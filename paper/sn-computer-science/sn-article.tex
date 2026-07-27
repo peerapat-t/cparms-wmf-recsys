@@ -7,6 +7,7 @@
 \usepackage{xcolor}
 \usepackage{manyfoot}
 \usepackage{booktabs}
+\usepackage{placeins}
 \usepackage{rotating}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric}
@@ -24,8 +25,8 @@
 %%               Title              %%
 %%==================================%%
 
-\title[CPARMS-WMF under Sparse Implicit Feedback]{
-CPARMS-WMF: A Clustering and Pairwise Association Rule Mining Signal for Weighted Matrix Factorization under Sparse Implicit Feedback
+\title[CPARMS-WMF]{
+CPARMS-WMF: A Clustering and Pairwise Association Rule Mining Signal for Weighted Matrix Factorization
 }
 
 
@@ -35,15 +36,16 @@ CPARMS-WMF: A Clustering and Pairwise Association Rule Mining Signal for Weighte
 
 \author[1]{\fnm{Peerapat} \sur{Tancharoen}\orcid{https://orcid.org/0009-0009-9937-5382}}\email{peerapat.tcr@gmail.com}
 
-\author[2]{\fnm{Ababa} \sur{Lekakabna}}
+\author[2]{\fnm{Bussaba} \sur{Amnueypornsakul}}\email{bussaba.a@kbtg.tech}
 
-\author*[1]{\fnm{Professor Ababa} \sur{Ssd, PhD}}\email{ababa.ssd@example.com}
+\author*[1]{\fnm{Arit} \sur{Thammano}}\email{arit@it.kmitl.ac.th}
 
 \affil*[1]{\orgdiv{Artificial Intelligence for Business Analytics},
 \orgname{School of Information Technology, King Mongkut's Institute of Technology Ladkrabang},
 \orgaddress{\city{Bangkok}, \postcode{10520}, \country{Thailand}}}
 
-\affil[2]{\orgname{KASIKORN Business-Technology Group}}
+\affil[2]{\orgname{KASIKORN Business-Technology Group},
+\orgaddress{\city{Pak Kret}, \state{Nonthaburi}, \postcode{11120}, \country{Thailand}}}
 
 
 %%==================================%%
@@ -51,13 +53,13 @@ CPARMS-WMF: A Clustering and Pairwise Association Rule Mining Signal for Weighte
 %%==================================%%
 
 \abstract{
-Weighted matrix factorization (WMF) struggles when interaction data are sparse. Side information can help, but user and item attributes are not always available. We examine whether patterns on the interaction matrix alone can help the limited history of an individual user.
+Weighted matrix factorization (WMF) struggles when interactions are sparse and side information is unavailable. We investigate whether patterns derived only from the interaction matrix can improve personalized Top-$K$ recommendation for users with short positive histories.
 
-We propose CPARMS-WMF, a feature-free framework that combines WMF with a Clustering and Pairwise Association Rule Mining Signal (CPARMS). CPARMS clusters users and items from positive feedback, mines single-antecedent rules over user-cluster, liked-item-cluster, and item-level tokens, and uses the resulting scores as an additional target. We evaluate CPARMS-WMF on five Amazon datasets with five random seeds and compare it with MostPop, Standard-WMF, and CoFactor-WMF.
+We propose CPARMS-WMF, a feature-free framework that clusters users and items from positive feedback, mines single-antecedent rules over user-cluster, liked-item-cluster, and item-level tokens, and incorporates the resulting user--item scores into WMF. We evaluate it on five Amazon datasets using a global temporal split and five random seeds against MostPop, Standard-WMF, and CoFactor-WMF.
 
-CPARMS-WMF wins $73/75$ baseline comparisons across dataset--seed runs: $25/25$ against MostPop and $24/25$ against each WMF baseline. On all five datasets, CPARMS-WMF achieves higher mean NDCG@10 than Standard-WMF ($+6.4\%$ to $+58.4\%$), CoFactor-WMF ($+5.3\%$ to $+55.8\%$), and MostPop ($+12.2\%$ to $+1724.4\%$). For users with one positive interaction, it wins $21/25$ against Standard-WMF and $19/25$ against CoFactor-WMF, but only $13/25$ against MostPop.
+CPARMS-WMF wins $73/75$ dataset--seed baseline comparisons: $25/25$ against MostPop and $24/25$ against each WMF baseline. Its mean normalized discounted cumulative gain at cutoff 10 (NDCG@10) is highest on all five datasets. For one-interaction users, it wins $21/25$ comparisons against Standard-WMF, $19/25$ against CoFactor-WMF, and $13/25$ against MostPop.
 
-CPARMS-WMF improves over Standard-WMF and CoFactor-WMF. It also performs better in most comparisons for users with one positive interaction, but the popularity baseline remains competitive for this group.
+CPARMS-WMF improves ranking over both WMF baselines overall and in most comparisons for one-interaction users, but popularity remains competitive for the shortest histories.
 }
 
 \keywords{ Recommender systems, Sparse implicit feedback, Weighted matrix factorization, Clustering, Association rule mining }
@@ -73,15 +75,15 @@ CPARMS-WMF improves over Standard-WMF and CoFactor-WMF. It also performs better 
 
 Recommender systems help people find relevant products and content in large catalogs, but recommendation quality often decreases for users with only one or a few recorded interactions.
 
-Collaborative filtering, especially matrix factorization (MF) \cite{koren2009mf}, remains widely used for its accuracy and scalability; it learns directly from interaction data, without requiring any side information. Weighted matrix factorization (WMF) \cite{hu2008implicit} adapts MF to implicit feedback by assigning different confidence levels to observed and unobserved interactions. Alternating least squares (ALS) can optimize it efficiently. Both MF and WMF still needs enough interaction history: when a user's history contains only a few interactions, the corresponding latent factors cannot be estimated reliably, and Top-$K$ ranking quality drops; highly sparse datasets make this even worse \cite{roy2022systematic}.
+Collaborative filtering, especially matrix factorization (MF) \cite{koren2009mf}, remains widely used for its accuracy and scalability; it learns directly from interaction data, without requiring any side information. Weighted matrix factorization (WMF) \cite{hu2008implicit} adapts MF to implicit feedback by assigning different confidence levels to observed and unobserved interactions. Alternating least squares (ALS) can optimize it efficiently. Both MF and WMF still need enough interaction history: when a user's history contains only a few interactions, the corresponding latent factors cannot be estimated reliably, and Top-$K$ ranking quality drops; highly sparse datasets make this even worse \cite{roy2022systematic}.
 
 One common solution to user sparsity is to add side information such as user profiles, demographic attributes, item descriptions, or cross-domain knowledge \cite{nguyen2013contentBoostedMF,fernandezTobias2019crossDomainColdStart,parthasarathy2023hybrid}. Side information can improve accuracy, but it is not always available. This gap motivates feature-free methods, which do not require user attributes or item metadata.
 
-The interaction matrix contains patterns beyond the history of any single user or item. Clustering can reveal group-level preferences \cite{mirbakhsh2016leveraging}; item co-occurrence can strengthen latent-factor learning \cite{liang2016cofactor}; and association rule mining can reveal directional relationships through support and confidence \cite{alsalama2015hybrid}. Previous work has combined item clustering with association rule mining to reduce sparsity \cite{najafabadi2017clusteringARM}, and CFCAI applies cluster-level rule mining to cold-start recommendation \cite{khaledian2025cfcai}.
+The interaction matrix contains patterns beyond the history of any single user or item. Clustering can reveal group-level preferences \cite{mirbakhsh2016leveraging}; item co-occurrence can strengthen latent-factor learning \cite{liang2016cofactor}; and association rule mining can reveal directional relationships \cite{alsalama2015hybrid}. Previous work has combined item clustering with association rule mining to reduce sparsity \cite{najafabadi2017clusteringARM}, and CFCAI applies cluster-level rule mining to cold-start recommendation \cite{khaledian2025cfcai}.
 
-These studies motivate an integrated all clustering, association rule mining, and weighted matrix factorization in a single model. Clustering captures shared preference structure, association rules and find directional rules, and WMF uses this information for personalized ranking. CPARMS-WMF combines these complementary functions within a single objective.
+These studies motivate integrating clustering, association rule mining, and weighted matrix factorization in a single model. Clustering captures shared preference structure, association rules identify directional relationships, and WMF uses this information for personalized ranking. CPARMS-WMF combines these signals within a single objective.
 
-We propose \textbf{CPARMS-WMF}, a feature-free framework for personalized recommendation under sparse implicit feedback. Its \textbf{Clustering and Pairwise Association Rule Mining Signal (CPARMS)} is derived only from the user--item interaction matrix. CPARMS clusters users and items by positive-interaction patterns, mines single-antecedent rules from user-cluster, liked-item-cluster, and item-level tokens, and converts those rules into a sparse user--item signal. An additional reconstruction term incorporates this signal into the ALS objective.
+We propose \textbf{CPARMS-WMF}, a feature-free framework for personalized recommendation under sparse implicit feedback. Its \textbf{Clustering and Pairwise Association Rule Mining Signal (CPARMS)} is derived only from the user--item interaction matrix. CPARMS clusters users and items by positive interaction patterns, mines single-antecedent rules from user-cluster, liked-item-cluster, and item-level tokens, and converts those rules into a user--item signal. An additional CPARMS term incorporates this signal into the ALS objective.
 
 We evaluate only users and items observed in the fit window. Users and items that appear only in the evaluation window are excluded from training and the candidate set, and their evaluation events are not scored. Among the remaining users, we include only those with at least one positive interaction in the fit window and at least one positive target in the evaluation window. Results are reported overall and separately for users with one, two, and three or more positive interactions.
 
@@ -90,15 +92,14 @@ CPARMS-WMF is compared with three feature-free baselines: a non-personalized pop
 The main contributions are:
 
 \begin{enumerate}
-\item We introduce CPARMS-WMF, a feature-free method for recommendation under sparse implicit feedback that not requires any user attributes ir item metadata.
+\item CPARMS-WMF is introduced as a feature-free method for recommendation under sparse implicit feedback that does not require user attributes or item metadata.
 
 \item CPARMS combines user and item clustering with pairwise association rule mining. It mines user-cluster, liked-item-cluster, and item-level rules from the transactions.
 
-\item We integrate the CPARMS signal into WMF through an additional reconstruction term optimized by alternating least squares.
+\item CPARMS is integrated into WMF through an additional CPARMS term optimized by alternating least squares.
 
-\item We evaluate CPARMS-WMF on five Amazon domains using five random seeds. NDCG@10 is the primary metric, with NDCG@20, NDCG@50, NDCG@100, and NDCG@200 reported as secondary measures. The analysis covers mean performance and pairwise dataset--seed comparisons against all three baselines, both overall and for users with one, two, and three or more positive interactions. It also identifies where CPARMS-WMF improves over the WMF baselines and where popularity remains competitive.
+\item CPARMS-WMF is evaluated on five Amazon domains using five random seeds. NDCG@10 is the primary metric, with NDCG@20, NDCG@50, NDCG@100, and NDCG@200 reported as secondary measures. The analysis covers mean performance and pairwise dataset--seed comparisons against all three baselines, both overall and for users with one, two, and three or more positive interactions. It also identifies where CPARMS-WMF improves over the WMF baselines and where popularity remains competitive.
 \end{enumerate}
-
 
 %%==================================%%
 %%          related work           %%
@@ -112,13 +113,13 @@ We first review matrix factorization for implicit feedback and then consider fea
 
 Matrix factorization (MF) is a core recommendation technique. It places users and items in a shared low-dimensional latent space and estimates preferences from how their latent factors interact \cite{koren2009mf}.
 
-Weighted matrix factorization (WMF) extends MF to implicit-feedback data by modeling binary preference alongside confidence weights. WMF learns its latent factors by minimizing a confidence-weighted reconstruction loss, most often with alternating least squares \cite{hu2008implicit}.
+Weighted matrix factorization (WMF) extends MF to implicit-feedback data by modeling binary preference alongside confidence weights. WMF learns its latent factors by minimizing a confidence-weighted WMF loss, most often with alternating least squares \cite{hu2008implicit}.
 
-Both methods remain sensitive to sparsity: when observed interactions are few, user representations rely on limited information, estimates become unreliable, and Top-$K$ ranking quality drops \cite{roy2022systematic}. This problem motivates additional signals derived from interactions.
+Both methods remain sensitive to sparsity: when observed interactions are limited, estimates become unreliable, and Top-$K$ ranking quality drops \cite{roy2022systematic}. This problem motivates additional signals derived from interactions.
 
 \subsection{Non-personalized Recommendation}
 
-Ranking candidate items by global popularity, identically for every user, is the standard non-personalized reference point in offline recommender evaluation \cite{aggarwal2016recommender,zangerle2022fevr}. Because this baseline does not use individual user histories, a personalized model that cannot outperform it has not demonstrated an accuracy benefit from personalization under this evaluation protocol. Under strong sparsity, popularity remains a strong baseline because items that are popular in the fit window are likely to reappear in a future evaluation window \cite{cremonesi2010performance}, and Section~\ref{sec5} shows that it outperforms Standard-WMF on two of our five datasets.
+Ranking candidate items by global popularity, identically for every user, is the standard non-personalized reference point in recommender evaluation \cite{aggarwal2016recommender,zangerle2022fevr}. Because this baseline does not use individual user histories, a personalized model that cannot outperform it has not demonstrated an accuracy benefit from personalization under this evaluation protocol. Popularity remains a strong Top-$N$ baseline: prior work shows that a naive TopPop method can rival sophisticated personalized algorithms and that highly popular items can skew Top-$N$ accuracy \cite{cremonesi2010performance}. Section~\ref{sec5} shows that it outperforms Standard-WMF on two of our five datasets.
 
 \subsection{Hybrid Matrix Factorization with Side Information}
 
@@ -126,11 +127,11 @@ A common approach to reducing sparsity is to use side information with collabora
 
 Cross-domain matrix factorization transfers information from related domains by using item metadata and semantic relationships as links between source and target items. It is especially helpful for new users \cite{fernandezTobias2019crossDomainColdStart}. More broadly, hybrid recommender systems combine collaborative and content-based filtering so that each approach can address the weaknesses of the other \cite{parthasarathy2023hybrid}.
 
-\subsection{Hybrid Matrix Factorization without Side Information}
+\subsection{Interaction-Derived Structure and Related Hybrid Methods}
 
-Unlike hybrid methods that rely on external attributes, feature-free methods draw additional signals only from the user--item interaction matrix. Clustering-based approaches identify preference structures shared by users or items \cite{mirbakhsh2016leveraging}, while association-rule approaches mine directional item relationships from transaction data \cite{alsalama2015hybrid}. Some studies combine two techniques or connect one of them to matrix factorization. Clustering is used to reduce the dimensionality of the item space, followed by association rule mining \cite{najafabadi2017clusteringARM}. CFCAI mines rules between clusters to support cold-start recommendation \cite{khaledian2025cfcai}. CoFactor instead adds an item--item co-occurrence term to the factorization objective, supplying information for items with few observed interactions \cite{liang2016cofactor}. To our knowledge, none of the studies reviewed above integrates clustering, association rule mining, and weighted matrix factorization within one model.
+Interaction-derived methods draw additional signals from user--item data without requiring external attributes. Clustering-based approaches identify preference structures shared by users or items \cite{mirbakhsh2016leveraging}, while association-rule approaches mine directional item relationships from transaction data \cite{alsalama2015hybrid}. Some studies combine the two techniques or connect one of them to matrix factorization. For example, one approach reduces the dimensionality of the item space through clustering and then applies association rule mining to implicit interactions \cite{najafabadi2017clusteringARM}. CFCAI mines rules between clusters to support cold-start recommendation, while also using demographic and profile information \cite{khaledian2025cfcai}. CoFactor instead adds an item--item co-occurrence term to the factorization objective, supplying information for items with few observed interactions \cite{liang2016cofactor}. To our knowledge, none of the studies reviewed above integrates clustering, association rule mining, and weighted matrix factorization within one model.
 
-CoFactor is a relevant matrix-factorization baseline because it links implicit-feedback WMF with an item--item co-occurrence signal derived from the same interaction matrix \cite{liang2016cofactor}. The original model jointly reconstructs the user--item interaction matrix and an item--item shifted positive pointwise mutual information (SPPMI) matrix. Using the notation of this paper, a CoFactor-style objective is
+CoFactor is a relevant weighted matrix factorization baseline because it links implicit-feedback WMF with an item--item co-occurrence signal derived from the same interaction matrix \cite{liang2016cofactor}. CoFactor-WMF augments Standard-WMF with an item--item shifted positive pointwise mutual information (SPPMI) term. Using the notation of this paper, a CoFactor-style objective is
 \begin{equation}
 \begin{aligned}
 \mathcal{L}_{\mathrm{CoFactor}}
@@ -159,7 +160,7 @@ m_{ij}
 \end{aligned}
 \label{eq:cofactor_objective}
 \end{equation}
-Here $\pi_{ui}$ is the binary implicit preference, $c_{ui}$ is its WMF confidence weight, $\mathbf{p}_u$ and $\mathbf{q}_i$ are user and item factors, $m_{ij}$ is the SPPMI value for item $i$ and context item $j$, $\mathcal{M}$ indexes nonzero SPPMI entries, $\mathbf{z}_j$ is a context factor, $b_i$ and $d_j$ are item-side and context-side biases, $\gamma_{\mathrm{co}}$ controls the co-occurrence reconstruction weight, and $\lambda_{\mathrm{ctx}}$ regularizes the context factors. The shared item factor $\mathbf{q}_i$ connects the WMF component to the SPPMI reconstruction component. We compute the SPPMI entries from item co-occurrence counts $c_{ij}$, where $c_{ij}$ is the number of users who positively interacted with both items $i$ and $j$, and we set the diagonal to zero:
+Here $\pi_{ui}$ is the binary implicit preference, $c_{ui}$ is its WMF confidence weight, $\mathbf{p}_u$ and $\mathbf{q}_i$ are user and item factors, $m_{ij}$ is the SPPMI value for item $i$ and context item $j$, $\mathcal{M}$ indexes nonzero SPPMI entries, $\mathbf{z}_j$ is a context factor, $b_i$ and $d_j$ are item-side and context-side biases, $\gamma_{\mathrm{co}}$ controls the co-occurrence-term weight, and $\lambda_{\mathrm{ctx}}$ regularizes the context factors. The shared item factor $\mathbf{q}_i$ connects the WMF term to the SPPMI term. We compute the SPPMI entries from item co-occurrence counts $c_{ij}$, where $c_{ij}$ is the number of users who positively interacted with both items $i$ and $j$, and we set the diagonal to zero:
 \begin{equation}
 \operatorname{SPPMI}_{ij}
 =
@@ -178,7 +179,7 @@ Equation~\eqref{eq:cofactor_objective} keeps the co-occurrence term weighted and
 
 \subsection{How the Proposed Method Differs}
 
-The feature-free methods reviewed above use clustering, association rule mining, and weighted matrix factorization mostly separately. CPARMS-WMF combines all three in one framework: clustering provides group-level preference structure shared across the members of each user or item cluster, pairwise association rules provide directional confidence-weighted information, and WMF provides personalized latent-factor ranking. CoFactor-WMF adds SPPMI item co-occurrence to matrix factorization, which makes it a suitable baseline for CPARMS-WMF because both use extra information from the interaction matrix. The main difference is that CoFactor-WMF regularizes shared item embeddings with item-level co-occurrence, while CPARMS builds a user--item signal from item--item, user-cluster--item, and liked-item-cluster--item relations.
+The feature-free methods reviewed above use one or two of clustering, association rule mining, and weighted matrix factorization. CPARMS-WMF combines all three in one framework: clustering provides group-level preference structure shared across the members of each user or item cluster, pairwise association rules provide directional confidence-weighted information, and WMF provides personalized latent-factor ranking. CoFactor-WMF adds SPPMI item co-occurrence to matrix factorization, which makes it a suitable baseline for CPARMS-WMF because both use extra information from the interaction matrix. The main difference is that CoFactor-WMF regularizes shared item embeddings with item-level co-occurrence, while CPARMS builds a user--item signal from item--item, user-cluster--item, and liked-item-cluster--item relations.
 
 CPARMS uses three token families: user-cluster, liked-item-cluster, and item-level tokens. User-cluster tokens provide a generic signal shared by users in the same cluster, while the other two provide personalized signals based on each user's positive history.
 
@@ -193,7 +194,7 @@ This comparison raises two questions. First, can CPARMS-WMF improve personalized
 
 \textbf{CPARMS-WMF} is designed to improve Top-$K$ recommendation under sparse implicit feedback by deriving its CPARMS signal through clustering and pairwise association rule mining on the user--item interaction matrix.
 
-Three main components make up the framework: (i) interaction-based clustering of users and items, followed by pairwise association rule mining; (ii) construction of a sparse user--item recommendation signal from the rules; and (iii) integration of that signal into a weighted matrix-factorization objective optimized by alternating least squares.
+Three main components make up the framework: (i) interaction-based clustering of users and items, followed by pairwise association rule mining; (ii) construction of a sparse user--item recommendation signal from the rules; and (iii) integration of that signal into a weighted matrix factorization objective optimized by alternating least squares.
 
 \subsection{Notation and Feedback Views}
 
@@ -205,21 +206,21 @@ Let $\mathcal{U}=\{1,\ldots,U\}$ and $\mathcal{I}=\{1,\ldots,I\}$ be the user an
 \qquad \theta=3.
 \label{eq:binary}
 \end{equation}
-$\mathbf{L}$ is the positive feedback (``liked'') view: at $\theta=3$, integer ratings of four or higher count as positive. $\mathbf{B}$ is the ``seen'' view, recording every observed rating at any level.
+$\mathbf{L}$ is the positive feedback (``liked'') view: at $\theta=3$, integer ratings of four or higher count as positive. This threshold follows the MovieLens preprocessing used in CoFactor~\cite{liang2016cofactor}. We additionally retain $\mathbf{B}$ as the ``seen'' view, recording every observed rating at any level so that all previously rated items can be masked at ranking time.
 
 All learned inputs are derived from $\mathbf{L}$: the cluster assignments, transaction tokens, association rules, SPPMI matrix, and WMF preference target. The matrix $\mathbf{B}$ is used only to mask candidates. An item is therefore treated as seen after any rating, even one below the like threshold, and is not recommended again. For user $u$, let $\Omega_u^{+}=\{i \mid \ell_{ui}=1\}$ denote the positive history, $\Omega_u=\{i \mid b_{ui}=1\} \supseteq \Omega_u^{+}$ the seen set, and $n_u=|\Omega_u^{+}|$.
 
 
 \subsection{CPARMS: Clustering and Pairwise Association Rule Construction}
 
-Previous studies show that combining clustering with association rule mining can improve collaborative filtering on sparse data~\cite{mirbakhsh2016leveraging,alsalama2015hybrid,najafabadi2017clusteringARM}. CPARMS follows this approach and builds an additional sparse signal using only positive interactions.
+Previous studies show that clustering and association rule mining can improve collaborative filtering on sparse data~\cite{mirbakhsh2016leveraging,alsalama2015hybrid,najafabadi2017clusteringARM}. CPARMS builds on these ideas to construct an additional sparse signal using only positive interactions.
 
-We cluster users and items separately with K-means~\cite{macqueen1967kmeans} on the binary positive feedback matrix. K-means is fitted only to active rows, which contain at least one positive interaction, and the fitted model then assigns every row---including an all-zero row---to its nearest cluster. Excluding all-zero rows from fitting prevents identical inactive rows from forming an uninformative cluster. User clustering operates on the rows of $\mathbf{L}$ and produces $K_U$ clusters; the one-hot matrix $\mathbf{U} \in \{0,1\}^{U \times K_U}$ records each user's assignment. Item clustering operates on the rows of $\mathbf{L}^{\top}$ and produces the one-hot assignment matrix $\mathbf{G} \in \{0,1\}^{I \times K_I}$. We then construct a binary liked-item-cluster matrix that records whether a user's positive history contains any item from each cluster:
+We cluster users and items separately with K-means~\cite{macqueen1967kmeans} on the binary positive feedback matrix. Each fit uses K-means++ initialization, $10$ restarts, and the experiment seed. K-means is fitted only to active rows, which contain at least one positive interaction, and the fitted model then assigns every row---including an all-zero row---to its nearest cluster. Excluding all-zero rows from fitting prevents identical inactive rows from forming an uninformative cluster. User clustering operates on the rows of $\mathbf{L}$ and produces $K_U$ clusters; the one-hot matrix $\mathbf{U} \in \{0,1\}^{U \times K_U}$ records each user's assignment. Item clustering operates on the rows of $\mathbf{L}^{\top}$ and produces the one-hot assignment matrix $\mathbf{G} \in \{0,1\}^{I \times K_I}$. We then construct a binary liked-item-cluster matrix that records whether a user's positive history contains any item from each cluster:
 \begin{equation}
 \mathbf{E} = \mathbb{I}\!\left[\, \mathbf{L}\mathbf{G} > 0 \,\right] \in \{0,1\}^{U \times K_I}.
 \label{eq:presence}
 \end{equation}
-The search grid contains only positive values for both cluster counts, so both cluster-token families appear in every CPARMS-WMF configuration by construction. When $K_U=1$, all users share the same user-cluster token, which acts as a dataset-wide popularity signal. Validation selects this setting for some datasets (Section~\ref{sec5}).
+When $K_U=1$, all users share the same user-cluster token, which acts as a dataset-wide popularity signal. Validation selects this setting for some datasets (Section~\ref{sec5}).
 
 For each user, we stack three token families (user-cluster tokens, liked-item-cluster tokens, and item-level tokens) into a single transaction matrix:
 \begin{equation}
@@ -250,7 +251,7 @@ Each selected rule keeps its confidence as its weight:
 W_{ab} = D_{ab}\,\mathrm{conf}(a \rightarrow b).
 \label{eq:rule_weight}
 \end{equation}
-Thus, selected rules carry weight in proportion to their directional reliability, while support and lift serve only as noise filters through Eq.~\eqref{eq:mask}. Collecting the selected rules produces $\mathbf{W} \in \mathbb{R}^{M \times I}$, which encodes the filtered relationships from antecedent tokens to individual-item consequents.
+Thus, retained rules carry weight in proportion to their directional reliability, while support and lift serve only as noise filters through Eq.~\eqref{eq:mask}. Collecting the retained rules produces $\mathbf{W} \in \mathbb{R}^{M \times I}$, which encodes the filtered relationships from antecedent tokens to individual-item consequents.
 
 \begin{figure}[t]
 \centering
@@ -271,7 +272,7 @@ Thus, selected rules carry weight in proportion to their directional reliability
 \node[clusterstage, right=of s2] (s3) {\textbf{3. K-means on $\mathbf{L}$}\\users: rows of $\mathbf{L}\rightarrow\mathbf{U}$\\items: rows of $\mathbf{L}^{\top}\rightarrow\mathbf{G}$\\$\mathbf{E}=\mathbb{I}[\mathbf{L}\mathbf{G}>0]$};
 \node[matrixstage, right=of s3] (s4) {\textbf{4. Token matrix}\\$\mathbf{T}=[\mathbf{L}\mid\mathbf{U}\mid\mathbf{E}]$\\$\mathbf{L}$: item-level token\\$\mathbf{U}$: user-cluster token\\$\mathbf{E}$: liked-item-cluster token};
 \node[rulestage, below=of s4] (s5) {\textbf{5. Pairwise rules}\\$\mathbf{C}=\mathbf{T}^{\top}\mathbf{T}$\\directed single-antecedent rules\\item consequents only\\noise filtering: support, confidence, lift};
-\node[rulestage, left=of s5] (s6) {\textbf{6. Rule scores}\\$W_{ab}=D_{ab}\,\mathrm{conf}(a\rightarrow b)$\\confidence of selected rules};
+\node[rulestage, left=of s5] (s6) {\textbf{6. Rule scores}\\$W_{ab}=D_{ab}\,\mathrm{conf}(a\rightarrow b)$\\confidence of retained rules};
 \node[transformstage, left=of s6] (s7) {\textbf{7. Sum confidences, mask}\\$\tilde{\mathbf{S}}=\mathbf{T}\mathbf{W}$\\$\mathbf{L},\mathbf{E}$ personalized; $\mathbf{U}$ generic\\remove all seen items ($\mathbf{B}$)};
 \node[outputstage, left=of s7] (s8) {\textbf{8. Normalize}\\row max /\\log-damped row max\\$\mathbf{S}\in\mathbb{R}^{|\mathcal{U}|\times|\mathcal{I}|}$};
 \draw[arrow] (s1) -- (s2);
@@ -312,13 +313,13 @@ The raw signal is the equal-weight sum of the personalized and generic signals:
 = \tilde{\mathbf{S}}^{(p)} + \tilde{\mathbf{S}}^{(g)} .
 \label{eq:signal_sum}
 \end{equation}
-There is no blending parameter; the way the two signals combine depends entirely on token activation. Every user activates one user-cluster token, so the generic signal gives a shared cluster-level score vector to each cluster member. In contrast, the number of active personalized antecedents grows with $n_u$, so the personalized signal becomes stronger as positive history grows.
+There is no specific blending parameter; the way the two signals combine depends entirely on token activation. Every user activates one user-cluster token, so the generic signal gives a shared cluster-level score vector to each cluster member. In contrast, the number of active personalized antecedents grows with $n_u$, so the personalized signal becomes stronger as positive history grows.
 
 Equation~\eqref{eq:signal_sum} shows that a user with $n_u=0$ would receive only the generic signal. We do not evaluate this case because users with no positive interactions are outside the evaluation population (Section~\ref{sec4_split}).
 
 After summing the confidence scores, we set the score of every seen item to zero using $\mathbf{B}$, so the signal applies only to unseen items. Since the seen set includes all positive items, none of them retains a signal score.
 
-The unseen signal is then normalized using one of two searched modes. Row-wise maximum scaling divides each user row by its own maximum. log-transformed row-wise scaling first compresses heavy-tailed rule-score sums with $\log(1+\cdot)$ so that a single dominant item does not compress the remaining scores in the row toward zero. Let $\tilde{s}_{ui}$ be the unseen raw signal. The two modes are:
+The unseen signal is then normalized using one of two searched modes. Row-wise maximum scaling divides each user row by its own maximum. Log-transformed row-wise scaling first compresses heavy-tailed rule-score sums with $\log(1+\cdot)$ so that a single dominant item does not compress the remaining scores in the row toward zero. Let $\tilde{s}_{ui}$ be the unseen raw signal. The two modes are:
 \begin{equation}
 s_{ui} = \frac{\tilde{s}_{ui}}{\max_{j}\tilde{s}_{uj}},
 \qquad\text{or}\qquad
@@ -329,7 +330,7 @@ Empty rows remain zero, and $0 \le s_{ui} \le 1$ under either mode. This yields 
 
 \subsection{CPARMS-WMF: Signal-Regularized Weighted Matrix Factorization}
 
-CPARMS-WMF integrates the signal into a single matrix-factorization objective. It adds a reconstruction term over signal-supported items to implicit-feedback WMF~\cite{hu2008implicit}, similar to the additional reconstruction regularizer in CoFactor~\cite{liang2016cofactor}. We compute interaction scores as the inner product of latent factors:
+CPARMS-WMF integrates the signal into a single matrix factorization objective. It adds a CPARMS term over signal-supported items to implicit-feedback WMF~\cite{hu2008implicit}, similar to the additional SPPMI term in CoFactor~\cite{liang2016cofactor}. We compute interaction scores as the inner product of latent factors:
 \begin{equation}
 \hat{y}_{ui} = \mathbf{p}_u^{\top}\mathbf{q}_i,
 \qquad \mathbf{p}_u, \mathbf{q}_i \in \mathbb{R}^{K},
@@ -342,9 +343,9 @@ where $K$ is the latent dimension. Stacking row-wise gives $\mathbf{P}\in\mathbb
 c_{ui} = 1 + \alpha\,\pi_{ui},
 \label{eq:pref_conf}
 \end{equation}
-where $\alpha \ge 0$ sets the extra confidence placed on positive interactions. One threshold $\theta=3$ defines positives across CPARMS construction, SPPMI construction, WMF training, and evaluation relevance, following the explicit-to-implicit preprocessing of CoFactor~\cite{liang2016cofactor}.
+where $\alpha \ge 0$ sets the extra confidence placed on positive interactions. One threshold $\theta=3$ defines positives across CPARMS construction, SPPMI construction, WMF training, and evaluation relevance.
 
-The training objective combines a confidence-weighted reconstruction term over all user--item pairs, a $\gamma$-weighted reconstruction term over signal-supported pairs, and an $\ell_2$ penalty,
+The training objective combines a confidence-weighted WMF term over all user--item pairs, a $\gamma$-weighted CPARMS term over signal-supported pairs, and an $\ell_2$ penalty,
 \begin{equation}
 \begin{aligned}
 \mathcal{L} =\;
@@ -357,7 +358,30 @@ c_{ui}\,\big(\pi_{ui} - \hat{y}_{ui}\big)^2
 \end{aligned}
 \label{eq:objective}
 \end{equation}
-The first term is the standard implicit WMF loss. It pulls predictions toward $1$ on observed positives with high confidence $1+\alpha$ and toward $0$ on all remaining pairs with unit confidence. The second term aligns predictions with the CPARMS signal on signal-supported candidate items. Every signal-supported item lies outside the seen set ($\Psi_u \cap \Omega_u = \varnothing$), so the signal never competes with an observed positive target. For each item $i \in \Psi_u$, the implicit term pulls the prediction toward $0$ with unit confidence, while the $\gamma$ term pulls it toward $s_{ui}$. Together, these terms raise CPARMS-supported candidates above other unobserved items. The second term therefore provides additional information: each signal-supported entry receives a nonzero target outside the user's observed history, whereas the implicit term alone would treat it only as an unobserved zero. Users with short histories gain extra least-squares constraints wherever the rules support unseen candidates. The hyperparameter $\gamma$ sets the strength of the signal regularizer, and $\lambda$ is the $\ell_2$ coefficient.
+The first term is the standard implicit WMF loss. It pulls predictions toward $1$ on observed positives with high confidence $1+\alpha$ and toward $0$ on all remaining pairs with unit confidence. The second term aligns predictions with the CPARMS signal on signal-supported candidate items. Every signal-supported item lies outside the seen set ($\Psi_u \cap \Omega_u = \varnothing$), so the signal never competes with an observed positive target. For each item $i \in \Psi_u$, the implicit term pulls the prediction toward $0$ with unit confidence, while the $\gamma$ term pulls it toward $s_{ui}$. Together, these terms encourage higher scores for CPARMS-supported candidates than for other unobserved items. The second term therefore provides additional information: each signal-supported entry receives a nonzero target outside the user's observed history, whereas the implicit term alone would treat it only as an unobserved zero. Users with short histories gain extra least-squares constraints wherever the rules support unseen candidates. The hyperparameter $\gamma$ sets the strength of the signal regularizer, and $\lambda$ is the $\ell_2$ coefficient. Table~\ref{tab:loss_activity} summarizes the activity of both loss terms.
+
+\begin{table}[ht]
+\caption{Per-entry activity of the WMF and CPARMS objective terms. The
+CPARMS term is active only on signal-supported entries ($s_{ui}>0$)}
+\label{tab:loss_activity}
+\centering
+\small
+\begin{tabular}{@{}ccp{0.30\textwidth}p{0.44\textwidth}@{}}
+\toprule
+$s_{ui}$ & $\ell_{ui}$ & WMF term & CPARMS term \\
+\midrule
+$0$ & $0$ & Pulls $\hat{y}_{ui}$ toward $0$ &
+Inactive \\
+$0$ & $1$ & Pulls $\hat{y}_{ui}$ toward $1$ with weight $1+\alpha$ &
+Inactive \\
+$>0$ & $0$ & Pulls $\hat{y}_{ui}$ toward $0$ &
+Pulls $\hat{y}_{ui}$ toward $s_{ui}$ with weight $\gamma$ \\
+$>0$ & $1$ & Not applicable &
+Cannot occur because signal scores on seen items are masked \\
+\botrule
+\end{tabular}
+\end{table}
+\FloatBarrier
 
 \subsection{Optimization via Alternating Least Squares}
 
@@ -404,7 +428,7 @@ The experiments use five datasets, a global temporal split, three baselines, and
 
 We use five public benchmark datasets from the 2018 Amazon review corpus \cite{ni2019justifying}: Luxury Beauty, Industrial and Scientific, Prime Pantry, Digital Music, and Musical Instruments. The released 5-core datasets provide the input, and we use only the interaction fields. We then de-duplicate all datasets, keeping the earliest review or, when several reviews share the earliest timestamp, the one with the highest rating. Table~\ref{tab:dataset_stats} reports the resulting statistics.
 
-\begin{table}[h]
+\begin{table}[ht]
 \caption{Statistics of the Amazon benchmark datasets after de-duplication}
 \label{tab:dataset_stats}
 \centering
@@ -426,7 +450,7 @@ The published datasets are 5-core based on raw review counts, but our pipeline r
 
 \subsection{Data Splitting Protocol}\label{sec4_split}
 
-We use a global temporal split to preserve chronological order and avoid training on future interactions~\cite{meng2020splitting}. The procedure sorts all events from oldest to newest, using stable input-row order to break timestamp ties. Row position defines an approximate $70/10/20$ training, validation, and test split. Each boundary is then moved to the nearest change in timestamp so that events recorded at the same time remain in one partition.
+We use a global temporal split to provide a more realistic evaluation setting and avoid training on future interactions~\cite{meng2020splitting}. The procedure sorts all events from oldest to newest, using stable input-row order to break timestamp ties. Row position defines an approximate $70/10/20$ training, validation, and test split. Each boundary is then moved to the nearest change in timestamp so that events recorded at the same time remain in one partition.
 
 The fit window alone defines which users and items the model can use:
 
@@ -438,7 +462,7 @@ The fit window alone defines which users and items the model can use:
 
 Users and items that appear only in a future window never enter the fit matrix as empty rows or columns, so they cannot affect training or appear as candidate items. In particular, they cannot change the $U$ denominator of rule support and lift in Eq.~\eqref{eq:metrics}. We drop rather than score evaluation events involving unknown users or items. Hyperparameter tuning uses the training and validation sets, after which we retrain the selected configuration on the combined training-plus-validation interactions before the held-out test evaluation.
 
-We divide evaluation users into three positive interaction groups according to the size of their positive history $n_u$: $1$, $2$, and $3^{+}$ interactions. An evaluated user must have $n_u \ge 1$ and at least one positive target in the evaluation window. Users with $n_u = 0$ are excluded because an all-zero positive feedback row gives both WMF baselines a zero user factor when solved with ALS. Scoring CPARMS's cluster-level information against baselines with no user-specific estimate would answer a different question; we leave a fair evaluation of that case for future work.
+We divide evaluation users into three positive interaction groups according to the size of their positive history $n_u$: $1$, $2$, and $3^{+}$ interactions. An evaluated user must have $n_u \ge 1$ and at least one known positive target in the evaluation window after unknown users and items have been removed. Users with $n_u = 0$ are excluded because an all-zero positive feedback row gives both WMF baselines a zero user factor when solved with ALS. Scoring CPARMS's cluster-level information against baselines with no user-specific estimate would answer a different question; we leave a fair evaluation of that case for future work.
 
 Under this protocol, the test evaluation covers $1{,}019$ users in Luxury Beauty, $3{,}904$ in Industrial \& Scientific, $2{,}722$ in Pantry, $4{,}080$ in Music, and $8{,}541$ in Instruments. Among these users, $110$, $456$, $343$, $462$, and $1{,}017$, respectively, have only one positive interaction in the fit window. These evaluated users represent $26.7\%$, $35.4\%$, $19.2\%$, $24.6\%$, and $31.0\%$ of the total users in each dataset, respectively. Most evaluated users have at least three positive interactions and therefore belong to the $3^{+}$ group.
 
@@ -450,13 +474,13 @@ We compare CPARMS-WMF with three feature-free baselines. Every model uses the sa
 
 \textbf{Standard-WMF} is the implicit-feedback WMF model of Hu et al.~\cite{hu2008implicit}. It uses binary preference $\pi_{ui}=\ell_{ui}$ and confidence $c_{ui}=1+\alpha\pi_{ui}$ and learns user and item factors through $\ell_2$ regularization and ALS.
 
-\textbf{CoFactor-WMF} implements the model in Section~\ref{sec2}. It shares the WMF item factors with a reconstruction of the item--item SPPMI matrix in Eq.~\eqref{eq:sppmi}. The model uses unit weights on nonzero SPPMI entries, separate context factors, item and context biases, and ALS updates for user, item, context, and bias parameters \cite{liang2016cofactor}.
+\textbf{CoFactor-WMF} implements the model in Section~\ref{sec2}. It augments the WMF objective with an item--item SPPMI term over the matrix in Eq.~\eqref{eq:sppmi}. The model uses unit weights on nonzero SPPMI entries, separate context factors, item and context biases, and ALS updates for user, item, context, and bias parameters \cite{liang2016cofactor}.
 
 The search uses CoFactor's original parameters. It samples the relative WMF scale $\ell$ and derives $\gamma_{\mathrm{co}}=1/\ell$ and $\lambda_{\mathrm{ctx}}=\gamma_{\mathrm{co}}\lambda$ instead of treating the co-occurrence weight and context regularizer as independent parameters. Both search grids come directly from the original paper: $\ell\in\{0.01,0.05,0.1,0.5,1,5,10\}$ and the number of negative samples $k\in\{1,2,5,10,50\}$~\cite{liang2016cofactor}. Sampling these quantities independently could assign negligible weight to the co-occurrence term, effectively reducing CoFactor-WMF toward Standard-WMF. We therefore preserve the coupling used in the original parameterization.
 
 \subsection{Evaluation Metrics}\label{sec4_metrics}
 
-We measure recommendation performance with normalized discounted cumulative gain (NDCG) at cutoffs $10$, $20$, $50$, $100$, and $200$, following standard offline evaluation practice~\cite{zangerle2022fevr}. Relevance is binary: a held-out interaction counts as relevant once its rating exceeds $\theta=3$. For user $u$, let $\mathrm{rel}_{u,r}=1$ when the item ranked at position $r$ is relevant and $0$ otherwise, and let $\operatorname{IDCG@K}_u$ denote the ideal discounted cumulative gain, that is, the maximum discounted cumulative gain attainable for that user's known relevant test items at cutoff $K$. Then
+We measure recommendation performance with NDCG at cutoffs $10$, $20$, $50$, $100$, and $200$, following standard offline evaluation practice~\cite{zangerle2022fevr}. Relevance is binary: a held-out interaction counts as relevant once its rating exceeds $\theta=3$. For user $u$, let $\mathrm{rel}_{u,r}=1$ when the item ranked at position $r$ is relevant and $0$ otherwise, and let $\operatorname{IDCG@K}_u$ denote the ideal discounted cumulative gain, that is, the maximum discounted cumulative gain attainable for that user's known relevant test items at cutoff $K$. Then
 \begin{equation}
 \operatorname{NDCG@K}_u
 =
@@ -474,11 +498,11 @@ For each user, we remove all seen items ($\mathbf{B}$, not only liked items) fro
 
 \subsection{Hyperparameter Search}\label{sec4_hyperparameter}
 
-We choose model hyperparameters by randomized search~\cite{bergstra2012random}. For each seed, we sample $30$ aligned configurations once and reuse them across all datasets. Within a trial, the WMF-based models share the factorization hyperparameters ($K$, $\lambda$, ALS sweeps, and $\alpha$). We draw CPARMS-specific choices from the same random stream after these shared values, while CoFactor-specific choices use an offset random stream. For each dataset--seed pair, we keep the configuration with the best validation NDCG@10, then retrain the model on the combined training-plus-validation set before testing.
+We choose model hyperparameters by randomized search~\cite{bergstra2012random}. For each seed, we sample $30$ aligned configurations once and reuse them across all datasets. Within a trial, the WMF-based models share the factorization hyperparameters ($K$, $\lambda$, ALS sweeps, and $\alpha$). We draw CPARMS-specific choices from the same random stream after these shared values, while CoFactor-specific choices use an offset random stream. The experiment seed controls both factor initialization and K-means. For each dataset--seed pair, we keep the configuration with the best validation NDCG@10, then retrain the model on the combined training-plus-validation set before testing.
 
-Table~\ref{tab:search_space} summarizes the search space. The CPARMS rule thresholds include zero and small positive values because rule-metric scales vary greatly across antecedent families under extreme sparsity. We keep the two reconstruction weights separate: CPARMS's $\gamma$ weights a user--item signal on a $[0,1]$ scale, while CoFactor's $\gamma_{\mathrm{co}}$ weights an SPPMI target whose scale depends on co-occurrence statistics.
+Table~\ref{tab:search_space} summarizes the search space. The CPARMS rule thresholds include zero and small positive values because rule-metric scales vary greatly across antecedent families under extreme sparsity. We keep the two auxiliary-term weights separate: CPARMS's $\gamma$ weights a user--item signal on a $[0,1]$ scale, while CoFactor's $\gamma_{\mathrm{co}}$ weights an SPPMI target whose scale depends on co-occurrence statistics.
 
-\begin{table}[h]
+\begin{table}[ht]
 \caption{Hyperparameter search space and descriptions. The search samples thirty configurations
 per seed and evaluates them on every dataset}
 \label{tab:search_space}
@@ -492,7 +516,7 @@ Latent dimension $K$      & \{10, 20, 30, 40\}                 & all WMF & laten
 Regularization $\lambda$  & \{0.0001, 0.001, 0.01, 0.1\}       & all WMF & $\ell_2$ penalty \\
 ALS sweeps                & \{15, 20, 25, 30\}                 & all WMF & ALS iterations \\
 Confidence $\alpha$       & \{10, 20, 40, 80\}                 & all WMF & confidence on positives \\
-Signal weight $\gamma$    & \{0.5, 1.0, 2.0, 4.0\}             & CPARMS  & signal-reconstruction weight \\
+Signal weight $\gamma$    & \{0.5, 1.0, 2.0, 4.0\}             & CPARMS  & weight of the signal term \\
 Signal normalization      & \{row\_max, log\_row\_max\}        & CPARMS  & signal scaling mode \\
 User clusters $K_U$       & \{1, 2, 3, 5\}                     & CPARMS  & user clusters \\
 Item clusters $K_I$       & \{1, 2, 3, 5\}                     & CPARMS  & item clusters \\
@@ -513,7 +537,7 @@ Context regularization    & derived: $\lambda_{\mathrm{ctx}}=\gamma_{\mathrm{co}
 
 \section{Results}\label{sec5}
 
-We first report overall NDCG and then analyze performance across positive-interaction groups. All NDCG values are percentages reported as means over seeds $42$--$46$, with sample standard deviations where applicable. The best values appear in bold; second-best values are underlined. Pairwise seed wins also show whether the advantage appears in many runs or only a few.
+We first report overall NDCG and then analyze performance across positive interaction groups. All NDCG values are percentages reported as means over seeds $42$--$46$, with sample standard deviations where applicable. The best values appear in bold; second-best values are underlined. Pairwise seed wins also show whether the advantage appears in many runs or only a few.
 
 \subsection{Overall Improvement in Personalized Ranking}
 
@@ -564,7 +588,7 @@ At two interactions, CPARMS-WMF wins $22/25$ against Standard-WMF, $23/25$ again
 
 \subsection{Computational Cost}
 
-Table~\ref{tab:runtime} reports training time. CPARMS-WMF costs more to train than either WMF baseline: total time ranges from $0.334$ minutes on Luxury Beauty to $8.818$ minutes on Instruments. This is $3.1$--$14.2\times$ the training time of Standard-WMF and $2.1$--$6.6\times$ that of CoFactor-WMF. Most of the extra time comes from denser signal-regularized ALS updates rather than signal construction.
+Table~\ref{tab:runtime} reports training time measured on a machine with an AMD Ryzen 5 7535U processor and 32~GB of RAM. CPARMS-WMF costs more to train than either WMF baseline: total time ranges from $0.334$ minutes on Luxury Beauty to $8.818$ minutes on Instruments. This is $3.1$--$14.2\times$ the training time of Standard-WMF and $2.1$--$6.6\times$ that of CoFactor-WMF. Most of the extra time comes from denser signal-regularized ALS updates rather than signal construction.
 
 \subsection{Hyperparameter Behavior}
 
@@ -580,7 +604,7 @@ Because we select a configuration for each dataset--seed pair using validation N
 
 \subsection{Stability Across Seeds}
 
-Seed-to-seed variation of CPARMS-WMF is small, as the sample standard deviations in Table~\ref{tab:ndcg_group} show. The largest overall standard deviation is $0.18$ on Luxury Beauty, followed by about $0.11$ on Pantry and $0.10$ on Instruments. The one-positive-interaction group varies more, especially on Luxury Beauty and Instruments, because each user has a shorter interaction history and the evaluated subgroup is smaller.
+Seed-to-seed variation of CPARMS-WMF is small, as the sample standard deviations in Table~\ref{tab:ndcg_group} show. Each seed changes both the randomized-search draw and model initialization, so this variation reflects the complete selection-and-training procedure. The largest overall standard deviation is $0.18$ on Luxury Beauty, followed by about $0.11$ on Pantry and $0.10$ on Instruments. The one-interaction group varies more, especially on Luxury Beauty and Instruments, because each user has a shorter interaction history and the evaluated subgroup is smaller.
 
 \clearpage
 
@@ -771,17 +795,17 @@ Instruments & 42 & 30 & 0.01 & 15 & 80 & 4 & 1 & 3 & 0.0001 & 0.0005 & 0 & row \
 
 \section{Discussion}\label{sec6}
 
-CPARMS-WMF improves on both WMF baselines across all five datasets, with the largest gains on Industrial \& Scientific and Instruments. These are also the domains in which popularity is relatively strong, suggesting that the generic component may help when sparse histories make the WMF estimates less reliable.
+CPARMS-WMF has higher mean NDCG@10 than both WMF baselines on all five datasets, with the largest gains on Industrial \& Scientific and Instruments. These are also the domains in which popularity is relatively strong, suggesting that the generic component may help when sparse histories make the WMF estimates less reliable.
 
-CoFactor-WMF is the closest baseline because both models are feature-free extensions of the same WMF objective. CoFactor-WMF slightly exceeds Standard-WMF on four of the five dataset means, whereas CPARMS-WMF exceeds CoFactor-WMF on all five means and in $24/25$ runs. Under this evaluation, CPARMS-WMF outperforms the CoFactor-WMF implementation.
+CoFactor-WMF is the closest baseline because both models are feature-free extensions of the same WMF objective. CoFactor-WMF slightly exceeds Standard-WMF on four of the five dataset means, whereas CPARMS-WMF exceeds CoFactor-WMF on all five means and in $24/25$ runs. Under this evaluation, CPARMS-WMF outperforms CoFactor-WMF.
 
-Performance for the one-positive-interaction group is less consistent. CPARMS-WMF generally improves on the WMF baselines but does not consistently outperform MostPop, indicating that one positive interaction may provide too little user-specific information in popularity-dominated domains.
+Performance for the one-interaction group is less consistent. CPARMS-WMF generally improves on the WMF baselines but does not consistently outperform MostPop, indicating that one positive interaction may provide too little user-specific information in popularity-dominated domains.
 
 The advantage over the WMF baselines grows as the number of positive interactions increases. At two interactions, CPARMS-WMF wins $22/25$ comparisons against Standard-WMF and $23/25$ against CoFactor-WMF. At three or more interactions, it has the best mean on all datasets. However, MostPop beats both WMF baselines overall on Industrial \& Scientific and Instruments.
 
 On Industrial \& Scientific, where popularity is strongest and both WMF baselines trail MostPop, validation selects $K_U=1$ in all five runs (Section~\ref{sec5}). The generic component then becomes a popularity-like prior, and CPARMS-WMF is the only personalized model to beat MostPop. Validation selects $K_U>1$ on Music and in four of the five Luxury Beauty runs. As $n_u$ grows, users activate more item and liked-item-cluster tokens, increasing the personalized part of the signal (Section~\ref{sec3}). CPARMS-WMF can thus use a popularity-like component in a popularity-dominated domain while retaining cluster- and item-level information elsewhere.
 
-Performance shows no clear pattern across datasets. Music has the smallest CPARMS-WMF margin over Standard-WMF ($+6.4\%$), while Industrial \& Scientific has the largest ($+58.4\%$). The strongest competitor for users with one positive interaction also varies by domain: CoFactor-WMF on Luxury Beauty and Music, while popularity remains difficult to beat for these users on Industrial \& Scientific and Instruments. Pantry is the only dataset where CPARMS-WMF has the best mean for users with one positive interaction.
+The size and source of the gain vary across datasets. Music has the smallest CPARMS-WMF margin over Standard-WMF ($+6.4\%$), while Industrial \& Scientific has the largest ($+58.4\%$). The strongest competitor for users with one positive interaction also varies by domain: CoFactor-WMF on Luxury Beauty and Music, while popularity remains difficult to beat for these users on Industrial \& Scientific and Instruments. Pantry is the only dataset where CPARMS-WMF has the best mean for users with one positive interaction.
 
 
 %%==================================%%
@@ -793,11 +817,11 @@ Performance shows no clear pattern across datasets. Music has the smallest CPARM
 This study has three main limitations.
 
 \begin{enumerate}
-\item \textbf{Popularity stays competitive at the shortest histories.} CPARMS-WMF improves over Standard-WMF and CoFactor-WMF in most comparisons for users with one positive interaction. However, MostPop has the best mean for users with one positive interaction on Industrial \& Scientific and Instruments and the best mean for users with two positive interactions on Industrial \& Scientific. As a result, the method reduces the performance loss of the WMF baselines at short histories but does not always beat a non-personalized baseline.
+\item \textbf{Popularity stays competitive at the shortest histories.} CPARMS-WMF improves over Standard-WMF and CoFactor-WMF in most comparisons for users with one positive interaction. However, MostPop has the best mean for users with one positive interaction on Industrial \& Scientific and Instruments and the best mean for users with two positive interactions on Industrial \& Scientific. As a result, the method improves on the WMF baselines at short histories but does not always beat a non-personalized baseline.
 
 \item \textbf{Computational cost.} CPARMS-WMF is slower than both WMF baselines, especially on the larger datasets, because the additional signal increases the work required for ALS updates.
 
-\item \textbf{Limited base-model integration.} The main contribution of this study is the CPARMS signal, which is designed to augment a base recommender; in this work, we integrate it only with WMF. We have not evaluated whether CPARMS can be combined effectively with other architectures, such as graph-based or neural-based. The reported results therefore establish the effectiveness of CPARMS with WMF but do not yet demonstrate that it generalizes across base models.
+\item \textbf{Limited base-model integration.} The main contribution of this study is the CPARMS signal, which is designed to augment a base recommender; in this work, we integrate it only with WMF. We have not evaluated whether CPARMS can be combined effectively with other architectures, such as graph-based or neural recommender models.
 
 \end{enumerate}
 
@@ -808,13 +832,15 @@ This study has three main limitations.
 
 \section{Conclusion}\label{sec7}
 
-We examined whether interaction data alone can improve personalized recommendation under sparse implicit feedback. The proposed \textbf{CPARMS-WMF} framework clusters users and items from positive feedback, mines single-antecedent association rules over user-cluster, liked-item-cluster, and item-level tokens, and reconstructs the resulting signal through an additional ALS-optimized term.
+We examined whether interaction data alone can improve personalized recommendation under sparse implicit feedback. The proposed \textbf{CPARMS-WMF} framework clusters users and items from positive feedback, mines single-antecedent association rules over item, user-cluster, and liked-item-cluster tokens, and incorporates the resulting signal through an additional ALS-optimized term.
 
-Overall, CPARMS-WMF achieves higher ranking accuracy than both WMF baselines under the evaluated protocol and outperforms MostPop at the dataset level.
+Under a global temporal split, CPARMS-WMF beats MostPop, Standard-WMF, and CoFactor-WMF in $73$ of the $75$ dataset--seed comparisons. It improves NDCG@10 over Standard-WMF on all five Amazon datasets ($+6.4\%$ to $+58.4\%$), wins $24/25$ runs against each WMF baseline and $25/25$ against MostPop, and has the best overall mean on all five datasets.
 
-The advantage weakens for users with one positive interaction, particularly relative to MostPop.
+For users with exactly one positive interaction, CPARMS-WMF beats Standard-WMF in $21/25$ seed runs and CoFactor-WMF in $19/25$. The gains are not consistent across datasets: Luxury Beauty is the clearest exception, with both WMF baselines having higher one-interaction means. The results do not show consistent wins over popularity; CPARMS-WMF wins only $13/25$ one-interaction runs against MostPop.
 
-Future work should first establish a fair protocol for users with no positive interactions. A component-wise ablation could then separate the contributions of user-cluster, liked-item-cluster, and item-level antecedents. Future studies should also integrate the CPARMS signal with other base recommenders, including graph-based and neural matrix-factorization models, to determine whether its benefits extend beyond WMF. Evaluation beyond NDCG should also examine whether the gains persist for diversity, novelty, and calibration.
+Future work could extend CPARMS beyond pairwise rules with single antecedents. The current design keeps rule mining efficient and interpretable, but higher-order antecedents may capture combinations of liked items or item clusters that cannot be expressed by a single token. Comparative experiments with Apriori or FP-Growth should therefore evaluate whether these richer patterns improve ranking accuracy enough to justify their additional mining cost~\cite{mythili2013performance}. Another priority is a fair evaluation protocol for users with no positive fit-window history.
+
+Finally, this study has limited base-model integration. Although the CPARMS signal is designed to augment a base recommender, we evaluate it only with WMF. It therefore remains unclear whether CPARMS can be combined effectively with other architectures. Future work should integrate the signal with graph-based and neural recommender models to determine whether its benefits generalize beyond WMF.
 
 \clearpage
 
@@ -836,10 +862,10 @@ The authors thank the thesis advisor and committee members for their guidance an
 \section*{Statements and Declarations}
 
 \bmhead{Funding}
-This work was supported by King Mongkut's Institute of Technology Ladkrabang (KMITL) and KASIKORN Business-Technology Group (KBTG).
+This work was supported by King Mongkut's Institute of Technology Ladkrabang (KMITL) and KASIKORN Business-Technology Group (KBTG). No grant number was assigned.
 
 \bmhead{Competing interests}
-The authors declare no competing interests.
+B.A. is employed by KASIKORN Business-Technology Group (KBTG), which supported this work. P.T. and A.T. declare no competing interests.
 
 \bmhead{Ethics approval}
 Not applicable. This study uses an existing public review dataset and does not involve participant recruitment, intervention, or animal research.
@@ -851,14 +877,14 @@ Not applicable.
 Not applicable.
 
 \bmhead{Data availability}
-The Amazon review datasets used in this study are publicly available from the McAuley lab data repository~\cite{ni2019justifying}. Section~\ref{sec4} fully describes the experimental configurations, including the hyperparameter search space and the evaluation protocol, to support reproducibility.
+The Amazon review datasets used in this study are publicly available from the McAuley lab data repository at \url{https://nijianmo.github.io/amazon/}~\cite{ni2019justifying}. Section~\ref{sec4} fully describes the experimental configurations, including the hyperparameter search space and the evaluation protocol, to support reproducibility.
 
 \bmhead{Code availability}
 The implementation of CPARMS-WMF and the evaluation pipeline is publicly available at
 \url{https://github.com/peerapat-t/cparms-wmf-recsys}.
 
 \bmhead{Author contributions}
-P.T., A.L., and A.S. contributed to the study and manuscript preparation. All authors reviewed and approved the final manuscript.
+P.T., B.A., and A.T. contributed to the study and manuscript preparation. All authors reviewed and approved the final manuscript.
 
 
 %%==================================%%

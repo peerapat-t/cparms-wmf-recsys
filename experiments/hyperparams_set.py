@@ -31,7 +31,7 @@ def generate_hyperparam_samples(
         "alpha": [10.0, 20.0, 40.0, 80.0],
     }
 
-    # Weight of CPARMS signal reconstruction.
+    # Weight of the CPARMS signal term.
     gamma_space = [0.5, 1.0, 2.0, 4.0]
     # Scaling method for the generated CPARMS signal.
     normalize_space = ["row_max", "log_row_max"]

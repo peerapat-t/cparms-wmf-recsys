@@ -15,7 +15,7 @@ The default experiment enables a popularity baseline and three fitted WMF models
 | --- | --- | --- | --- |
 | `01 mostpop` | MostPop | `model/base_model/mostpop.py` | Deterministic global positive-popularity baseline. |
 | `02 standard_wmf` | Standard-WMF | `model/base_model/wmf_standard.py` | ALS-trained implicit-feedback WMF. |
-| `03 cofactor_wmf` | CoFactor-WMF | `model/signal_gen/generator_sppmi.py`, `model/base_model/wmf_cofactor.py` | WMF with shared item factors regularized by item-item SPPMI reconstruction. |
+| `03 cofactor_wmf` | CoFactor-WMF | `model/signal_gen/generator_sppmi.py`, `model/base_model/wmf_cofactor.py` | WMF with shared item factors regularized by an item-item SPPMI term. |
 | `04 cparms_wmf` | CPARMS-WMF | `model/signal_gen/generator_cparms.py`, `model/base_model/wmf_cparms.py` | WMF regularized toward a sparse CPARMS user-item signal. |
 
 ## Feedback Matrices
@@ -68,7 +68,7 @@ confidence `1 + alpha`. The model stores user factors in `P`, item factors in
 11. Optionally normalize with per-row `row_max` or log-damped per-row
     `log_row_max` (`log1p` before row-max scaling).
 
-`WMF_CPARMS` adds a signal reconstruction term over the nonzero entries of the
+`WMF_CPARMS` adds a signal term over the nonzero entries of the
 CPARMS signal matrix `S`, weighted by `gamma`.
 
 ### CoFactor Signal
@@ -77,8 +77,8 @@ CPARMS signal matrix `S`, weighted by `gamma`.
 training history. It counts off-diagonal item co-occurrences, converts counts to
 PMI, and keeps positive values after subtracting `log(negative_samples)`.
 
-`WMF_Cofactor` combines WMF user-item reconstruction with item-item SPPMI
-reconstruction. It updates user factors, item factors, context factors, and
+`WMF_Cofactor` combines the WMF loss with an item-item SPPMI term. It updates
+user factors, item factors, context factors, and
 item/context co-occurrence biases. If `fit()` receives no item-item matrix and
 `gamma > 0`, it builds SPPMI internally; the final test notebook builds SPPMI
 explicitly for positive `gamma` so signal-generation runtime can be logged separately.

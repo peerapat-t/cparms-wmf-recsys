@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.7.24)  27 JUL 2026 17:16
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.7.24)  27 JUL 2026 23:48
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -727,6 +727,9 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \@lastruleclass=\count329
 \@thisrulewidth=\dimen264
 )
+(C:\Users\user\AppData\Local\Programs\MiKTeX\tex/latex/placeins\placeins.sty
+Package: placeins 2005/04/18  v 2.2
+)
 (C:\Users\user\AppData\Local\Programs\MiKTeX\tex/latex/pgf/frontendlayer\tikz.s
 ty
 (C:\Users\user\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgf.sty
@@ -1053,27 +1056,28 @@ File: pgflibraryshapes.geometric.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 ex.def
 File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count351
-) (sn-article.aux)
+)
+(C:\Users\user\Documents\GitHub\cparms-wmf-recsys\output\pdf\sn-article.aux)
 \openout1 = `sn-article.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 20.
-LaTeX Font Info:    ... okay on input line 20.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 20.
-LaTeX Font Info:    ... okay on input line 20.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 20.
-LaTeX Font Info:    ... okay on input line 20.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 20.
-LaTeX Font Info:    ... okay on input line 20.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 20.
-LaTeX Font Info:    ... okay on input line 20.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 20.
-LaTeX Font Info:    ... okay on input line 20.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 20.
-LaTeX Font Info:    ... okay on input line 20.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 20.
-LaTeX Font Info:    ... okay on input line 20.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 20.
-LaTeX Font Info:    ... okay on input line 20.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 21.
+LaTeX Font Info:    ... okay on input line 21.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 21.
+LaTeX Font Info:    ... okay on input line 21.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 21.
+LaTeX Font Info:    ... okay on input line 21.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 21.
+LaTeX Font Info:    ... okay on input line 21.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 21.
+LaTeX Font Info:    ... okay on input line 21.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 21.
+LaTeX Font Info:    ... okay on input line 21.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 21.
+LaTeX Font Info:    ... okay on input line 21.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 21.
+LaTeX Font Info:    ... okay on input line 21.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 21.
+LaTeX Font Info:    ... okay on input line 21.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -1136,33 +1140,34 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 g
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-LaTeX Info: Redefining \S on input line 20.
-LaTeX Font Info:    Redeclaring symbol font `AMSa' on input line 20.
+LaTeX Info: Redefining \S on input line 21.
+LaTeX Font Info:    Redeclaring symbol font `AMSa' on input line 21.
 LaTeX Font Info:    Overwriting symbol font `AMSa' in version `normal'
-(Font)                  U/msa/m/n --> U/msa/m/n on input line 20.
+(Font)                  U/msa/m/n --> U/msa/m/n on input line 21.
 LaTeX Font Info:    Overwriting symbol font `AMSa' in version `bold'
-(Font)                  U/msa/m/n --> U/msa/m/n on input line 20.
-Package hyperref Info: Link coloring ON on input line 20.
- (sn-article.out) (sn-article.out)
+(Font)                  U/msa/m/n --> U/msa/m/n on input line 21.
+Package hyperref Info: Link coloring ON on input line 21.
+ (C:\Users\user\Documents\GitHub\cparms-wmf-recsys\output\pdf\sn-article.out) (
+C:\Users\user\Documents\GitHub\cparms-wmf-recsys\output\pdf\sn-article.out)
 \@outlinefile=\write4
 \openout4 = `sn-article.out'.
 
-LaTeX Font Info:    Calculating math sizes for size <12.045> on input line 66.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 66.
+LaTeX Font Info:    Calculating math sizes for size <12.045> on input line 67.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 67.
 
 
 (C:\Users\user\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 66.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 67.
 
 
 (C:\Users\user\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Calculating math sizes for size <11.04124> on input line 66
+LaTeX Font Info:    Calculating math sizes for size <11.04124> on input line 67
 .
-LaTeX Font Info:    Calculating math sizes for size <9.03374> on input line 66.
+LaTeX Font Info:    Calculating math sizes for size <9.03374> on input line 67.
 
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -1170,7 +1175,7 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
  [1
 
 {C:/Users/user/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}]
-LaTeX Font Info:    Calculating math sizes for size <10.03749> on input line 66
+LaTeX Font Info:    Calculating math sizes for size <10.03749> on input line 67
 .
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -1179,7 +1184,7 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [3]
-Underfull \hbox (badness 1360) in paragraph at lines 131--132
+Underfull \hbox (badness 1360) in paragraph at lines 132--133
 \OT1/cmr/m/n/10 Unlike hybrid meth-ods that rely on exter-nal attributes, featu
 re-free meth-ods
  []
@@ -1200,28 +1205,32 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [8]
+Underfull \hbox (badness 1762) in paragraph at lines 375--375
+[]\OT1/cmr/m/n/9 Pulls $[]$ toward $1$ with
+ []
+
+LaTeX Font Info:    Calculating math sizes for size <8.03> on input line 382.
+
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [9]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [10]
-LaTeX Font Info:    Calculating math sizes for size <8.03> on input line 412.
-
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [11]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [12]
-LaTeX Font Info:    Trying to load font information for OMS+cmr on input line 4
-91.
+LaTeX Font Info:    Trying to load font information for OMS+cmr on input line 5
+15.
 
 (C:\Users\user\AppData\Local\Programs\MiKTeX\tex/latex/base\omscmr.fd
 File: omscmr.fd 2024/11/19 v2.5n Standard LaTeX font definitions
 )
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <7> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 491.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 515.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
@@ -1233,7 +1242,7 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [14]
-Underfull \hbox (badness 1072) in paragraph at lines 571--572
+Underfull \hbox (badness 1072) in paragraph at lines 595--596
 \OT1/cmr/m/n/10 Because we select a con-fig-u-ra-tion for each dataset--seed pa
 ir using val-i-da-tion
  []
@@ -1270,23 +1279,17 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
  [22]
 
 Package hyperref Warning: Difference (4) between bookmark levels is greater 
-(hyperref)                than one, level fixed on input line 829.
+(hyperref)                than one, level fixed on input line 855.
 
 
 Package hyperref Warning: Difference (3) between bookmark levels is greater 
-(hyperref)                than one, level fixed on input line 839.
+(hyperref)                than one, level fixed on input line 865.
 
 
 Package hyperref Warning: Difference (2) between bookmark levels is greater 
-(hyperref)                than one, level fixed on input line 842.
+(hyperref)                than one, level fixed on input line 868.
 
-
-Underfull \hbox (badness 1033) in paragraph at lines 861--862
- []\OT1/cmr/bx/n/10.03749 Author con-tri-bu-tions.[][] \OT1/cmr/m/n/10 P.T., A.
-L., and A.S. con-tributed to the study and
- []
-
-(sn-article.bbl
+(C:\Users\user\Documents\GitHub\cparms-wmf-recsys\output\pdf\sn-article.bbl
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [23
@@ -1298,7 +1301,7 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [25]
-(sn-article.aux)
+(C:\Users\user\Documents\GitHub\cparms-wmf-recsys\output\pdf\sn-article.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2025-12-24>
@@ -1307,10 +1310,10 @@ Package rerunfilecheck Info: File `sn-article.out' has not changed.
 (rerunfilecheck)             Checksum: A1067EE51AB947E54E7A45FFADEBBA6C;7147.
  ) 
 Here is how much of TeX's memory you used:
- 23599 strings out of 467871
- 441199 string characters out of 5418860
- 857103 words of memory out of 5000000
- 51939 multiletter control sequences out of 15000+600000
+ 23633 strings out of 467871
+ 442444 string characters out of 5418860
+ 857446 words of memory out of 5000000
+ 51966 multiletter control sequences out of 15000+600000
  664314 words of font info for 178 fonts, out of 8000000 for 9000
  1151 hyphenation exceptions out of 8191
  90i,15n,94p,1155b,812s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -1342,9 +1345,10 @@ C:/Users/user/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy
 8.pfb><C:/Users/user/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/
 cm/cmsy9.pfb><C:/Users/user/AppData/Local/Programs/MiKTeX/fonts/type1/public/am
 sfonts/symbols/msbm10.pfb>
-Output written on sn-article.pdf (25 pages, 464990 bytes).
+Output written on C:\Users\user\Documents\GitHub\cparms-wmf-recsys\output\pdf\s
+n-article.pdf (25 pages, 468822 bytes).
 PDF statistics:
- 571 PDF objects out of 1000 (max. 8388607)
- 124 named destinations out of 1000 (max. 500000)
+ 575 PDF objects out of 1000 (max. 8388607)
+ 126 named destinations out of 1000 (max. 500000)
  325 words of extra memory for PDF output out of 10000 (max. 10000000)
 

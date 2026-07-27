@@ -102,7 +102,7 @@ def _wmf_factor_update(
 # - item_factors: Current item latent-factor matrix.
 # - positive_feedback: Binary CSR user-item positive preferences.
 # - alpha: Extra confidence assigned to positive L entries.
-# Output: Confidence-weighted squared reconstruction loss over all user-item pairs.
+# Output: Confidence-weighted squared WMF loss over all user-item pairs.
 def _wmf_loss(
     user_factors: np.ndarray,
     item_factors: np.ndarray,
@@ -140,7 +140,7 @@ def _wmf_loss(
 # - cooccurrence: CSR item-item SPPMI target matrix.
 # - lambda_rate: Item-factor L2 regularization coefficient.
 # - alpha: Extra confidence assigned to positive L entries.
-# - gamma: Weight assigned to co-occurrence reconstruction.
+# - gamma: Weight assigned to the co-occurrence term.
 # Output: Updated item factor matrix.
 def _item_factor_update(
     L_T: sparse.csr_matrix,
@@ -208,7 +208,7 @@ def _item_factor_update(
 # - context_biases: Current context-side co-occurrence biases.
 # - cooccurrence_t: CSR transposed SPPMI target matrix.
 # - lambda_context_rate: Context-factor L2 regularization coefficient.
-# - gamma: Weight assigned to co-occurrence reconstruction.
+# - gamma: Weight assigned to the co-occurrence term.
 # Output: Updated context factor matrix.
 def _context_factor_update(
     item_factors: np.ndarray,
@@ -318,8 +318,8 @@ def _context_bias_update(
 # - item_biases: Current item-side co-occurrence biases.
 # - context_biases: Current context-side co-occurrence biases.
 # - cooccurrence: CSR SPPMI matrix.
-# - gamma: Weight assigned to co-occurrence reconstruction.
-# Output: Gamma-weighted item co-occurrence reconstruction loss.
+# - gamma: Weight assigned to the co-occurrence term.
+# Output: Gamma-weighted item co-occurrence loss.
 def _cooccurrence_loss(
     item_factors: np.ndarray,
     context_factors: np.ndarray,
@@ -533,7 +533,7 @@ class WMF_Cofactor:
                 )
 
             if _should_report_sweep(sweep_idx, verbose_every):
-                # Step 3.4: Calculate reconstruction, cofactor, and regularization losses.
+                # Step 3.4: Calculate WMF, CoFactor, and regularization losses.
                 wmf_loss = _wmf_loss(
                     self.P,
                     self.Q,

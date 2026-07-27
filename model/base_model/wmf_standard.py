@@ -101,7 +101,7 @@ def _als_factor_update(
 # - item_factors: Current item latent-factor matrix.
 # - positive_feedback: Binary CSR user-item positive preferences.
 # - alpha: Extra confidence assigned to positive L entries.
-# Output: Confidence-weighted squared reconstruction loss over all user-item pairs.
+# Output: Confidence-weighted squared WMF loss over all user-item pairs.
 def _wmf_loss(
     user_factors: np.ndarray,
     item_factors: np.ndarray,
@@ -215,7 +215,7 @@ class WMF_Standard:
             )
 
             if _should_report_sweep(sweep_idx, verbose_every):
-                # Step 2.3: Calculate reconstruction, regularization, and total losses.
+                # Step 2.3: Calculate WMF, regularization, and total losses.
                 wmf_loss = _wmf_loss(
                     self.P,
                     self.Q,

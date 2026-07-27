@@ -82,7 +82,7 @@ REPLACEMENTS = (
     ("สภาวะ", "ภาวะ"),
     ("อาทิ", "เช่น"),
     ("ผนวก", "รวม"),
-    # Reconstruction is already translated as “การสร้างใหม่” elsewhere.
+    # The preferred wording is already used elsewhere.
     ("การบูรณะ", "การสร้างใหม่"),
     ("ให้บูรณะ", "ให้สร้างใหม่"),
     ("บูรณะ", "สร้างใหม่"),

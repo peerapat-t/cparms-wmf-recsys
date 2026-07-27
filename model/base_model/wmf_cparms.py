@@ -53,7 +53,7 @@ def _initialize_factors(
 # - item_factors: Current item latent-factor matrix.
 # - positive_feedback: Binary CSR user-item positive preferences.
 # - alpha: Extra confidence assigned to positive L entries.
-# Output: Confidence-weighted squared reconstruction loss over all user-item pairs.
+# Output: Confidence-weighted squared WMF loss over all user-item pairs.
 def _wmf_loss(
     user_factors: np.ndarray,
     item_factors: np.ndarray,
@@ -88,7 +88,7 @@ def _wmf_loss(
 # - fixed_factors: Opposite-side latent factors held fixed.
 # - lambda_rate: L2 regularization coefficient.
 # - alpha: Extra confidence assigned to positive L entries.
-# - gamma: Weight assigned to signal reconstruction.
+# - gamma: Weight assigned to the signal term.
 # Output: Updated latent factor matrix for all rows.
 def _als_factor_update(
     L: sparse.csr_matrix,
@@ -155,8 +155,8 @@ def _als_factor_update(
 # - user_factors: Current user latent-factor matrix.
 # - item_factors: Current item latent-factor matrix.
 # - signal: Sparse user-item CPARMS signal matrix.
-# - gamma: Signal reconstruction weight.
-# Output: Gamma-weighted squared reconstruction loss over nonzero signal entries.
+# - gamma: Signal-term weight.
+# Output: Gamma-weighted squared signal loss over nonzero signal entries.
 def _signal_loss(
     user_factors: np.ndarray,
     item_factors: np.ndarray,
@@ -185,7 +185,7 @@ class WMF_CPARMS:
     # - K: Latent factor dimension.
     # - lambda_rate: L2 regularization coefficient.
     # - alpha: Extra confidence assigned to positive L entries.
-    # - gamma: Weight assigned to CPARMS-signal reconstruction.
+    # - gamma: Weight assigned to the CPARMS signal term.
     # - threshold: Minimum exclusive rating interpreted as positive feedback.
     # - random_state: Optional seed for factor initialization.
     # Output: Initialized CPARMS-regularized WMF model.
@@ -280,7 +280,7 @@ class WMF_CPARMS:
             )
 
             if _should_report_sweep(sweep_idx, verbose_every):
-                # Step 3.3: Calculate reconstruction, signal, regularization, and total losses.
+                # Step 3.3: Calculate WMF, signal, regularization, and total losses.
                 wmf_loss = _wmf_loss(
                     self.P,
                     self.Q,
