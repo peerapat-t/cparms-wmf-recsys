@@ -16,7 +16,13 @@ desktop.ini
 *.blg
 *.out
 *.toc
+*.lof
+*.lot
+*.bcf
+*.run.xml
 *.synctex.gz
 *.fls
 *.fdb_latexmk
-paper/**/*.log
+*-eps-converted-to.pdf
+*.log
+output/

@@ -1,22 +1,98 @@
 %Version 3.1 December 2024
-% See section 11 of the Springer Nature LaTeX template User Manual for version history.
-\documentclass[pdflatex,sn-vancouver-num]{sn-jnl}% Vancouver Numbered Reference Style (SN Computer Science)
+% See section 11 of the User Manual for version history
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                                                 %%
+%% Please do not use \input{...} to include other tex files.       %%
+%% Submit your LaTeX manuscript as one .tex document.              %%
+%%                                                                 %%
+%% All additional figures and files should be attached             %%
+%% separately and not embedded in the \TeX\ document itself.       %%
+%%                                                                 %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\usepackage{graphicx}
-\usepackage{amsmath,amssymb,amsfonts}
-\usepackage{xcolor}
-\usepackage{manyfoot}
-\usepackage{booktabs}
-\usepackage{placeins}
-\usepackage{rotating}
-\usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+%%\documentclass[referee,sn-basic]{sn-jnl}% referee option is meant for double line spacing
+
+%%=======================================================%%
+%% to print line numbers in the margin use lineno option %%
+%%=======================================================%%
+
+%%\documentclass[lineno,pdflatex,sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
+
+%%=========================================================================================%%
+%% the documentclass is set to pdflatex as default. You can delete it if not appropriate.  %%
+%%=========================================================================================%%
+
+%%\documentclass[sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
+
+%%Note: the following reference styles support Namedate and Numbered referencing. By default the style follows the most common style. To switch between the options you can add or remove "Numbered" in the optional parenthesis. 
+%%The option is available for: sn-basic.bst, sn-chicago.bst%  
+ 
+%%\documentclass[pdflatex,sn-nature]{sn-jnl}% Style for submissions to Nature Portfolio journals
+%%\documentclass[pdflatex,sn-basic]{sn-jnl}% Basic Springer Nature Reference Style/Chemistry Reference Style
+%%\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}% Math and Physical Sciences Numbered Reference Style
+%%\documentclass[pdflatex,sn-mathphys-ay]{sn-jnl}% Math and Physical Sciences Author Year Reference Style
+%%\documentclass[pdflatex,sn-aps]{sn-jnl}% American Physical Society (APS) Reference Style
+\documentclass[pdflatex,sn-vancouver-num]{sn-jnl}% Vancouver Numbered Reference Style (SN Computer Science)
+%%\documentclass[pdflatex,sn-vancouver-ay]{sn-jnl}% Vancouver Author Year Reference Style
+%%\documentclass[pdflatex,sn-apa]{sn-jnl}% APA Reference Style
+%%\documentclass[pdflatex,sn-chicago]{sn-jnl}% Chicago-based Humanities Reference Style
+
+%%%% Standard Packages
+%%<additional latex packages if required can be included here>
+
+\usepackage{graphicx}%
+\usepackage{multirow}%
+\usepackage{amsmath,amssymb,amsfonts}%
+\usepackage{amsthm}%
+\usepackage{mathrsfs}%
+\usepackage[title]{appendix}%
+\usepackage{xcolor}%
+\usepackage{textcomp}%
+\usepackage{manyfoot}%
+\usepackage{booktabs}%
+\usepackage{algorithm}%
+\usepackage{algorithmicx}%
+\usepackage{algpseudocode}%
+\usepackage{listings}%
+
+%%%% Additional packages required by this manuscript
+%%%% (the sn-jnl class already loads "rotating" for sidewaystable)
+\usepackage{placeins}%
+\usepackage{tikz}%
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}%
+%%%%
+
+%%%%%=============================================================================%%%%
+%%%%  Remarks: This template is provided to aid authors with the preparation
+%%%%  of original research articles intended for submission to journals published 
+%%%%  by Springer Nature. The guidance has been prepared in partnership with 
+%%%%  production teams to conform to Springer Nature technical requirements. 
+%%%%  Editorial and presentation requirements differ among journal portfolios and 
+%%%%  research disciplines. You may find sections in this template are irrelevant 
+%%%%  to your work and are empowered to omit any such section if allowed by the 
+%%%%  journal you intend to submit to. The submission guidelines and policies 
+%%%%  of the journal take precedence. A detailed User Manual is available in the 
+%%%%  template package for technical guidance.
+%%%%%=============================================================================%%%%
+
+%% as per the requirement new theorem styles can be included as shown below
+\theoremstyle{thmstyleone}%
+\newtheorem{theorem}{Theorem}%  meant for continuous numbers
+%%\newtheorem{theorem}{Theorem}[section]% meant for sectionwise numbers
+%% optional argument [theorem] produces theorem numbering sequence instead of independent numbers for Proposition
+\newtheorem{proposition}[theorem]{Proposition}% 
+%%\newtheorem{proposition}{Proposition}% to get separate numbers for theorem and proposition etc.
+
+\theoremstyle{thmstyletwo}%
+\newtheorem{example}{Example}%
+\newtheorem{remark}{Remark}%
+
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}%
 
 \raggedbottom
-
-\IfFileExists{Orcidlogo.eps}{}{%
-  \renewcommand{\orcidlogo}{\textcolor[HTML]{A6CE39}{\textbf{\footnotesize iD}}}%
-}
+%%\unnumbered% uncomment this for unnumbered level heads
 
 \begin{document}
 
@@ -34,6 +110,14 @@ CPARMS-WMF: A Clustering and Pairwise Association Rule Mining Signal for Weighte
 %%               Name               %%
 %%==================================%%
 
+%%=============================================================%%
+%% GivenName	-> \fnm{Joergen W.}
+%% Particle	-> \spfx{van der} -> surname prefix
+%% FamilyName	-> \sur{Ploeg}
+%% Suffix	-> \sfx{IV}
+%% \author*[1,2]{\fnm{Joergen W.} \spfx{van der} \sur{Ploeg} 
+%%  \sfx{IV}}\email{iauthor@gmail.com}
+%%=============================================================%%
 \author[1]{\fnm{Peerapat} \sur{Tancharoen}\orcid{https://orcid.org/0009-0009-9937-5382}}\email{peerapat.tcr@gmail.com}
 
 \author[2]{\fnm{Bussaba} \sur{Amnueypornsakul}}\email{bussaba.a@kbtg.tech}
@@ -53,16 +137,20 @@ CPARMS-WMF: A Clustering and Pairwise Association Rule Mining Signal for Weighte
 %%==================================%%
 
 \abstract{
-Weighted matrix factorization (WMF) struggles when interactions are sparse and side information is unavailable. We investigate whether patterns derived only from the interaction matrix can improve personalized Top-$K$ recommendation for users with short positive histories.
+Weighted matrix factorization (WMF) struggles when interactions are sparse and side information is not always available. We investigate whether patterns derived only from the interaction matrix can improve personalized Top-$K$ recommendation for users with short positive histories.
 
 We propose CPARMS-WMF, a feature-free framework that clusters users and items from positive feedback, mines single-antecedent rules over user-cluster, liked-item-cluster, and item-level tokens, and incorporates the resulting user--item scores into WMF. We evaluate it on five Amazon datasets using a global temporal split and five random seeds against MostPop, Standard-WMF, and CoFactor-WMF.
 
 CPARMS-WMF wins $73/75$ dataset--seed baseline comparisons: $25/25$ against MostPop and $24/25$ against each WMF baseline. Its mean normalized discounted cumulative gain at cutoff 10 (NDCG@10) is highest on all five datasets. For one-interaction users, it wins $21/25$ comparisons against Standard-WMF, $19/25$ against CoFactor-WMF, and $13/25$ against MostPop.
 
-CPARMS-WMF improves ranking over both WMF baselines overall and in most comparisons for one-interaction users, but popularity remains competitive for the shortest histories.
+CPARMS-WMF improves ranking over both WMF baselines overall and in most comparisons for one-interaction users, but popularity remains competitive.
 }
 
 \keywords{ Recommender systems, Sparse implicit feedback, Weighted matrix factorization, Clustering, Association rule mining }
+
+%%\pacs[JEL Classification]{D8, H51}
+
+%%\pacs[MSC Classification]{35A01, 65L10, 65L12, 65L20, 65L70}
 
 \maketitle
 
@@ -79,7 +167,7 @@ Collaborative filtering, especially matrix factorization (MF) \cite{koren2009mf}
 
 One common solution to user sparsity is to add side information such as user profiles, demographic attributes, item descriptions, or cross-domain knowledge \cite{nguyen2013contentBoostedMF,fernandezTobias2019crossDomainColdStart,parthasarathy2023hybrid}. Side information can improve accuracy, but it is not always available. This gap motivates feature-free methods, which do not require user attributes or item metadata.
 
-The interaction matrix contains patterns beyond the history of any single user or item. Clustering can reveal group-level preferences \cite{mirbakhsh2016leveraging}; item co-occurrence can strengthen latent-factor learning \cite{liang2016cofactor}; and association rule mining can reveal directional relationships \cite{alsalama2015hybrid}. Previous work has combined item clustering with association rule mining to reduce sparsity \cite{najafabadi2017clusteringARM}, and CFCAI applies cluster-level rule mining to cold-start recommendation \cite{khaledian2025cfcai}.
+The interaction matrix contains patterns beyond the history of any single user or item. Clustering can reveal group-level preferences \cite{mirbakhsh2016leveraging}, and item co-occurrence can strengthen latent-factor learning \cite{liang2016cofactor}. Association rule mining can reveal directional relationships: previous work has combined item clustering with association rule mining to reduce sparsity \cite{najafabadi2017clusteringARM}, and CFCAI applies cluster-level rule mining to cold-start recommendation \cite{khaledian2025cfcai}.
 
 These studies motivate integrating clustering, association rule mining, and weighted matrix factorization in a single model. Clustering captures shared preference structure, association rules identify directional relationships, and WMF uses this information for personalized ranking. CPARMS-WMF combines these signals within a single objective.
 
@@ -127,9 +215,9 @@ A common approach to reducing sparsity is to use side information with collabora
 
 Cross-domain matrix factorization transfers information from related domains by using item metadata and semantic relationships as links between source and target items. It is especially helpful for new users \cite{fernandezTobias2019crossDomainColdStart}. More broadly, hybrid recommender systems combine collaborative and content-based filtering so that each approach can address the weaknesses of the other \cite{parthasarathy2023hybrid}.
 
-\subsection{Interaction-Derived Structure and Related Hybrid Methods}
+\subsection{Hybrid Matrix Factorization without Side Information}
 
-Interaction-derived methods draw additional signals from user--item data without requiring external attributes. Clustering-based approaches identify preference structures shared by users or items \cite{mirbakhsh2016leveraging}, while association-rule approaches mine directional item relationships from transaction data \cite{alsalama2015hybrid}. Some studies combine the two techniques or connect one of them to matrix factorization. For example, one approach reduces the dimensionality of the item space through clustering and then applies association rule mining to implicit interactions \cite{najafabadi2017clusteringARM}. CFCAI mines rules between clusters to support cold-start recommendation, while also using demographic and profile information \cite{khaledian2025cfcai}. CoFactor instead adds an item--item co-occurrence term to the factorization objective, supplying information for items with few observed interactions \cite{liang2016cofactor}. To our knowledge, none of the studies reviewed above integrates clustering, association rule mining, and weighted matrix factorization within one model.
+Interaction-derived methods draw additional signals from user--item data without requiring external attributes. Clustering-based approaches identify preference structures shared by users or items \cite{mirbakhsh2016leveraging}, while association-rule approaches mine directional item relationships from transaction data. Some studies combine the two techniques or connect one of them to matrix factorization. For example, one approach reduces the dimensionality of the item space through clustering and then applies association rule mining to implicit interactions \cite{najafabadi2017clusteringARM}. CFCAI mines rules between clusters to support cold-start recommendation, while also using demographic and profile information \cite{khaledian2025cfcai}. CoFactor instead adds an item--item co-occurrence term to the factorization objective, supplying information for items with few observed interactions \cite{liang2016cofactor}. To our knowledge, none of the studies reviewed above integrates clustering, association rule mining, and weighted matrix factorization within one model.
 
 CoFactor is a relevant weighted matrix factorization baseline because it links implicit-feedback WMF with an item--item co-occurrence signal derived from the same interaction matrix \cite{liang2016cofactor}. CoFactor-WMF augments Standard-WMF with an item--item shifted positive pointwise mutual information (SPPMI) term. Using the notation of this paper, a CoFactor-style objective is
 \begin{equation}
@@ -213,7 +301,7 @@ All learned inputs are derived from $\mathbf{L}$: the cluster assignments, trans
 
 \subsection{CPARMS: Clustering and Pairwise Association Rule Construction}
 
-Previous studies show that clustering and association rule mining can improve collaborative filtering on sparse data~\cite{mirbakhsh2016leveraging,alsalama2015hybrid,najafabadi2017clusteringARM}. CPARMS builds on these ideas to construct an additional sparse signal using only positive interactions.
+Previous studies show that clustering and association rule mining can improve collaborative filtering on sparse data~\cite{mirbakhsh2016leveraging,najafabadi2017clusteringARM}. CPARMS builds on these ideas to construct an additional sparse signal using only positive interactions.
 
 We cluster users and items separately with K-means~\cite{macqueen1967kmeans} on the binary positive feedback matrix. Each fit uses K-means++ initialization, $10$ restarts, and the experiment seed. K-means is fitted only to active rows, which contain at least one positive interaction, and the fitted model then assigns every row---including an all-zero row---to its nearest cluster. Excluding all-zero rows from fitting prevents identical inactive rows from forming an uninformative cluster. User clustering operates on the rows of $\mathbf{L}$ and produces $K_U$ clusters; the one-hot matrix $\mathbf{U} \in \{0,1\}^{U \times K_U}$ records each user's assignment. Item clustering operates on the rows of $\mathbf{L}^{\top}$ and produces the one-hot assignment matrix $\mathbf{G} \in \{0,1\}^{I \times K_I}$. We then construct a binary liked-item-cluster matrix that records whether a user's positive history contains any item from each cluster:
 \begin{equation}
@@ -555,6 +643,7 @@ The relative improvement of CPARMS-WMF over baseline $b$ is
 \times 100 .
 \label{eq:relative_improvement}
 \end{equation}
+All $\Delta_b$ values are computed from unrounded scores, so they may differ slightly from values recomputed using the rounded means in the tables.
 
 \subsubsection{Performance against the WMF baselines}
 
@@ -817,7 +906,7 @@ The size and source of the gain vary across datasets. Music has the smallest CPA
 This study has three main limitations.
 
 \begin{enumerate}
-\item \textbf{Popularity stays competitive at the shortest histories.} CPARMS-WMF improves over Standard-WMF and CoFactor-WMF in most comparisons for users with one positive interaction. However, MostPop has the best mean for users with one positive interaction on Industrial \& Scientific and Instruments and the best mean for users with two positive interactions on Industrial \& Scientific. As a result, the method improves on the WMF baselines at short histories but does not always beat a non-personalized baseline.
+\item \textbf{Popularity stays competitive at the shortest histories.} CPARMS-WMF improves over Standard-WMF and CoFactor-WMF in most comparisons for users with one positive interaction. However, MostPop has the best mean for users with one positive interaction on Industrial \& Scientific and Instruments and the best mean for users with two positive interactions on Industrial \& Scientific. As a result, the method improves on the WMF baselines but does not always beat a non-personalized baseline.
 
 \item \textbf{Computational cost.} CPARMS-WMF is slower than both WMF baselines, especially on the larger datasets, because the additional signal increases the work required for ALS updates.
 
@@ -845,6 +934,19 @@ Finally, this study has limited base-model integration. Although the CPARMS sign
 \clearpage
 
 \backmatter
+
+%%==================================%%
+%%     supplementary information    %%
+%%==================================%%
+
+%% Not applicable to this manuscript. Uncomment and complete if needed:
+%%\bmhead{Supplementary information}
+%%
+%%If your article has accompanying supplementary file/s please state so here. 
+%%
+%%Authors reporting data from electrophoretic gels and blots should supply the full unprocessed scans for key as part of their Supplementary information. This may be requested by the editorial team/s if it is missing.
+%%
+%%Please refer to Journal-level guidance for any specific requirements.
 
 
 %%==================================%%
@@ -888,8 +990,42 @@ P.T., B.A., and A.T. contributed to the study and manuscript preparation. All au
 
 
 %%==================================%%
+%%            appendices            %%
+%%==================================%%
+
+%% Not applicable to this manuscript. Uncomment and complete if needed:
+%%\begin{appendices}
+%%
+%%\section{Section title of first appendix}\label{secA1}
+%%
+%%An appendix contains supplementary information that is not an essential part of the text itself but which may be helpful in providing a more comprehensive understanding of the research problem or it is information that is too cumbersome to be included in the body of the paper.
+%%
+%%%%=============================================%%
+%%%% For submissions to Nature Portfolio Journals %%
+%%%% please use the heading ``Extended Data''.   %%
+%%%%=============================================%%
+%%
+%%%%=============================================================%%
+%%%% Sample for another appendix section			       %%
+%%%%=============================================================%%
+%%
+%%%% \section{Example of another appendix section}\label{secA2}%
+%%%% Appendices may be used for helpful, supporting or essential material that would otherwise 
+%%%% clutter, break up or be distracting to the text. Appendices can consist of sections, figures, 
+%%%% tables and equations etc.
+%%
+%%\end{appendices}
+
+%%==================================%%
 %%           bibliography           %%
 %%==================================%%
+
+%%===========================================================================================%%
+%% If you are submitting to one of the Nature Portfolio journals, using the eJP submission   %%
+%% system, please include the references within the manuscript file itself. You may do this  %%
+%% by copying the reference list from your .bbl file, paste it into the main manuscript .tex %%
+%% file, and delete the associated \verb+\bibliography+ commands.                            %%
+%%===========================================================================================%%
 
 \bibliography{sn-bibliography}% common bib file
 %% if required, the content of .bbl file can be included here once bbl is generated
