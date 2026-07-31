@@ -22,17 +22,17 @@ def generate_hyperparam_samples(
     # Step 2: Define shared and model-specific hyperparameter spaces.
     param_space_common = {
         # Size of user/item latent vectors.
-        "latent": [10, 20, 30, 40],
+        "latent": [10, 20, 30, 40, 50],
         # User/item L2 penalty.
-        "lambda_rate": [0.0001, 0.001, 0.01, 0.1],
+        "lambda_rate": [0.00001, 0.0001, 0.001, 0.01, 0.1],
         # Number of full ALS updates.
-        "n_sweeps": [15, 20, 25, 30],
+        "n_sweeps": [10, 15, 20, 25, 30],
         # Confidence added to positive feedback.
-        "alpha": [10.0, 20.0, 40.0, 80.0],
+        "alpha": [5.0, 10.0, 20.0, 30.0, 40.0],
     }
 
     # Weight of the CPARMS signal term.
-    gamma_space = [0.5, 1.0, 2.0, 4.0]
+    gamma_space = [0.1, 0.25, 0.5, 1.0, 2.0]
     # Scaling method for the generated CPARMS signal.
     normalize_space = ["row_max", "log_row_max"]
 
@@ -43,16 +43,16 @@ def generate_hyperparam_samples(
     negative_samples_space = [1, 2, 5, 10, 50]
 
     param_space_cparms_wmf = {
-        # Number of user clusters sampled for generic rule antecedents.
-        "k_user": (1, 2, 3, 5),
-        # Number of item clusters sampled for personalized rule antecedents.
-        "K_item": (1, 2, 3, 5),
-        # Minimum support required to keep an association rule.
-        "min_support": (0.0, 0.00005, 0.0001, 0.0003),
+        # Candidate user-cluster counts, from a global segment to finer groups.
+        "k_user": (1, 2, 3, 4, 5),
+        # Candidate item-cluster counts, from a global segment to finer groups.
+        "k_item": (1, 2, 3, 4, 5),
+        # Minimum rule support. These values span light through strong filtering
+        "min_support": (0.0, 0.0001, 0.0003, 0.001, 0.002),
         # Minimum confidence required to keep an association rule.
-        "min_confidence": (0.0, 0.0005, 0.001, 0.002),
+        "min_confidence": (0.0, 0.0005, 0.001, 0.002, 0.003),
         # Minimum lift required to keep an association rule.
-        "min_lift": (0.0, 0.2, 0.5, 0.8),
+        "min_lift": (0.0, 0.5, 0.8, 1.0, 1.5),
     }
 
     # Step 3: Create deterministic random streams for aligned model samples.
@@ -71,12 +71,15 @@ def generate_hyperparam_samples(
         standard_wmf_params["random_state"] = resolved_seed
         normalize = rng.choice(normalize_space)
         gamma = rng.choice(gamma_space)
+        k_user = rng.choice(param_space_cparms_wmf["k_user"])
+        k_item = rng.choice(param_space_cparms_wmf["k_item"])
 
-        cparms_wmf_params = {
+        cparms_wmf_ar_uc_ic_params = {
             **standard_wmf_params,
             "gamma": gamma,
-            "k_user": rng.choice(param_space_cparms_wmf["k_user"]),
-            "K_item": rng.choice(param_space_cparms_wmf["K_item"]),
+            "k_user": k_user,
+            # Generator_CPARMS currently exposes this argument as ``K_item``.
+            "K_item": k_item,
             "min_support": rng.choice(
                 param_space_cparms_wmf["min_support"]
             ),
@@ -85,6 +88,21 @@ def generate_hyperparam_samples(
             ),
             "min_lift": rng.choice(param_space_cparms_wmf["min_lift"]),
             "normalize": normalize,
+        }
+        # Keep all CPARMS choices aligned within a round and only toggle the
+        # clustering branches required by each explicit ablation variant.
+        cparms_wmf_ar_params = {
+            **cparms_wmf_ar_uc_ic_params,
+            "k_user": None,
+            "K_item": None,
+        }
+        cparms_wmf_ar_uc_params = {
+            **cparms_wmf_ar_uc_ic_params,
+            "K_item": None,
+        }
+        cparms_wmf_ar_ic_params = {
+            **cparms_wmf_ar_uc_ic_params,
+            "k_user": None,
         }
 
         cofactor_relative_scale = cofactor_rng.choice(
@@ -102,8 +120,11 @@ def generate_hyperparam_samples(
 
         samples.append({
             "standard_wmf": standard_wmf_params,
-            "cparms_wmf": cparms_wmf_params,
             "cofactor_wmf": cofactor_wmf_params,
+            "cparms_wmf_ar_uc_ic": cparms_wmf_ar_uc_ic_params,
+            "cparms_wmf_ar": cparms_wmf_ar_params,
+            "cparms_wmf_ar_uc": cparms_wmf_ar_uc_params,
+            "cparms_wmf_ar_ic": cparms_wmf_ar_ic_params,
         })
 
     return samples
