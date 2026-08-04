@@ -44,8 +44,8 @@ def _one_hot(labels: np.ndarray, cluster_count: int) -> sparse.csr_matrix:
 # each retained rule by its confidence.
 class Generator_CPARMS:
     # Inputs:
-    # - k_user: Optional requested number of user clusters.
-    # - K_item: Optional requested number of item clusters.
+    # - k_user: Requested number of user clusters, or None to skip them.
+    # - K_item: Requested number of item clusters, or None to skip them.
     # - min_support: Minimum association-rule support in [0, 1].
     # - min_confidence: Minimum association-rule confidence in [0, 1].
     # - min_lift: Minimum non-negative association-rule lift.
@@ -56,7 +56,7 @@ class Generator_CPARMS:
     def __init__(
         self,
         k_user: int | None = 1,
-        K_item: int | None = None,
+        K_item: int | None = 1,
         min_support: float = 0.0,
         min_confidence: float = 0.0,
         min_lift: float = 0.0,
@@ -309,7 +309,7 @@ class Generator_CPARMS:
         user_membership = None
         item_cluster_presence = None
 
-        # Step 3: Optionally cluster active binary-positive user rows and add user-cluster (U) tokens.
+        # Step 3: Add user-cluster (U) tokens when user clustering is enabled.
         if self.k_user is not None:
             user_active = np.asarray(L.getnnz(axis=1)).reshape(-1) > 0
             user_labels, user_cluster_count = self._fit_predict_clusters(
@@ -318,7 +318,7 @@ class Generator_CPARMS:
             user_membership = _one_hot(user_labels, user_cluster_count)
             transaction_blocks.append(user_membership)
 
-        # Step 4: Optionally cluster active binary-positive item rows and add liked-item-cluster (E) tokens.
+        # Step 4: Add liked-item-cluster (E) tokens when item clustering is enabled.
         # These E tokens provide antecedent context only; consequents are always items.
         if self.K_item is not None:
             L_T = L.T.tocsr()
@@ -330,7 +330,7 @@ class Generator_CPARMS:
             item_cluster_presence = self._cluster_presence(L, item_membership)
             transaction_blocks.append(item_cluster_presence)
 
-        # Step 5: Horizontally combine token blocks into transaction matrix [L | U | E].
+        # Step 5: Combine the enabled token blocks into one transaction matrix.
         transactions = sparse.hstack(
             transaction_blocks,
             format="csr",

@@ -44,9 +44,9 @@ def generate_hyperparam_samples(
 
     param_space_cparms_wmf = {
         # Candidate user-cluster counts, from a global segment to finer groups.
-        "k_user": (1, 2, 3, 4, 5),
+        "k_user": (None, 1, 3, 5, 10),
         # Candidate item-cluster counts, from a global segment to finer groups.
-        "k_item": (1, 2, 3, 4, 5),
+        "k_item": (None, 1, 3, 5, 10),
         # Minimum rule support. These values span light through strong filtering
         "min_support": (0.0, 0.0001, 0.0003, 0.001, 0.002),
         # Minimum confidence required to keep an association rule.
@@ -74,7 +74,7 @@ def generate_hyperparam_samples(
         k_user = rng.choice(param_space_cparms_wmf["k_user"])
         k_item = rng.choice(param_space_cparms_wmf["k_item"])
 
-        cparms_wmf_ar_uc_ic_params = {
+        cparms_wmf_params = {
             **standard_wmf_params,
             "gamma": gamma,
             "k_user": k_user,
@@ -89,22 +89,6 @@ def generate_hyperparam_samples(
             "min_lift": rng.choice(param_space_cparms_wmf["min_lift"]),
             "normalize": normalize,
         }
-        # Keep all CPARMS choices aligned within a round and only toggle the
-        # clustering branches required by each explicit ablation variant.
-        cparms_wmf_ar_params = {
-            **cparms_wmf_ar_uc_ic_params,
-            "k_user": None,
-            "K_item": None,
-        }
-        cparms_wmf_ar_uc_params = {
-            **cparms_wmf_ar_uc_ic_params,
-            "K_item": None,
-        }
-        cparms_wmf_ar_ic_params = {
-            **cparms_wmf_ar_uc_ic_params,
-            "k_user": None,
-        }
-
         cofactor_relative_scale = cofactor_rng.choice(
             cofactor_relative_scale_space
         )
@@ -121,10 +105,7 @@ def generate_hyperparam_samples(
         samples.append({
             "standard_wmf": standard_wmf_params,
             "cofactor_wmf": cofactor_wmf_params,
-            "cparms_wmf_ar_uc_ic": cparms_wmf_ar_uc_ic_params,
-            "cparms_wmf_ar": cparms_wmf_ar_params,
-            "cparms_wmf_ar_uc": cparms_wmf_ar_uc_params,
-            "cparms_wmf_ar_ic": cparms_wmf_ar_ic_params,
+            "cparms_wmf": cparms_wmf_params,
         })
 
     return samples
