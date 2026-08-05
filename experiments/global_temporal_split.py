@@ -64,6 +64,10 @@ def _dataset_eda_stats(df: pd.DataFrame) -> dict:
         "n_items": n_items,
         "n_interactions": n_interactions,
         "n_users_eval": None,
+        "n_future_user_interactions_dropped": None,
+        "n_future_user_positive_targets_dropped": None,
+        "n_future_item_interactions_dropped": None,
+        "n_future_item_positive_targets_dropped": None,
         "interaction_1": None,
         "interaction_2": None,
         "interaction_3_plus": None,
@@ -146,6 +150,38 @@ def _evaluation_eda_stats(
         **activity_groups,
         "density_pct": matrix_stats["density_pct"],
         "sparsity_pct": matrix_stats["sparsity_pct"],
+    }
+
+
+# Inputs:
+# - fit_events: Events whose users and items define the stage's model universe.
+# - eval_events: Future events before fit-window filtering.
+# Output: Counts of evaluation interactions and positive targets removed because the
+# user or the item never appears in the fit window. The two drop reasons are reported
+# as disjoint categories: unknown-user events first, then unknown-item events among
+# the events whose user is known.
+def _eval_drop_stats(
+    fit_events: pd.DataFrame,
+    eval_events: pd.DataFrame,
+) -> dict:
+    known_user = eval_events["userid"].isin(
+        pd.Index(fit_events["userid"].unique())
+    )
+    known_item = eval_events["itemid"].isin(
+        pd.Index(fit_events["itemid"].unique())
+    )
+    dropped_user = eval_events.loc[~known_user]
+    dropped_item = eval_events.loc[known_user & ~known_item]
+
+    return {
+        "n_future_user_interactions_dropped": int(len(dropped_user)),
+        "n_future_user_positive_targets_dropped": int(
+            (dropped_user["rating"] > LIKE_THRESHOLD).sum()
+        ),
+        "n_future_item_interactions_dropped": int(len(dropped_item)),
+        "n_future_item_positive_targets_dropped": int(
+            (dropped_item["rating"] > LIKE_THRESHOLD).sum()
+        ),
     }
 
 
@@ -313,9 +349,13 @@ def get_temporal_split(
     trainval_df = pd.concat([train_df, val_df], ignore_index=True)
     train_val_mat, test_mat = _index_and_build(trainval_df, test_df)
 
+    val_eda = _evaluation_eda_stats(train_mat, val_mat)
+    val_eda.update(_eval_drop_stats(train_df, val_df))
+    test_eda = _evaluation_eda_stats(train_val_mat, test_mat)
+    test_eda.update(_eval_drop_stats(trainval_df, test_df))
     eda = {
         "raw": _dataset_eda_stats(df),
-        "val": _evaluation_eda_stats(train_mat, val_mat),
-        "test": _evaluation_eda_stats(train_val_mat, test_mat),
+        "val": val_eda,
+        "test": test_eda,
     }
     return train_mat, val_mat, train_val_mat, test_mat, eda

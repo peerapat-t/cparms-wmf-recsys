@@ -303,6 +303,8 @@ class Generator_CPARMS:
         L = to_L(Y, dtype=COUNT_DTYPE)
         B = to_B(Y, dtype=COUNT_DTYPE)
         _, item_count = L.shape
+        observed_user_mask = np.asarray(B.getnnz(axis=1)).reshape(-1) > 0
+        positive_user_mask = np.asarray(L.getnnz(axis=1)).reshape(-1) > 0
 
         # Step 2: Add individual liked-item tokens first; layout is [L | U | E].
         transaction_blocks = [L]
@@ -311,9 +313,8 @@ class Generator_CPARMS:
 
         # Step 3: Add user-cluster (U) tokens when user clustering is enabled.
         if self.k_user is not None:
-            user_active = np.asarray(L.getnnz(axis=1)).reshape(-1) > 0
             user_labels, user_cluster_count = self._fit_predict_clusters(
-                L, user_active, self.k_user
+                L, positive_user_mask, self.k_user
             )
             user_membership = _one_hot(user_labels, user_cluster_count)
             transaction_blocks.append(user_membership)
@@ -340,8 +341,13 @@ class Generator_CPARMS:
         transactions.eliminate_zeros()
         transactions.sort_indices()
 
-        # Step 6: Mine filtered directional rules mapping antecedent tokens to items.
-        rule_scores = self._build_rule_scores(transactions, item_count)
+        # Step 6: Mine rules from observed fit users only. Empty rows may represent
+        # future evaluation users; they receive the learned rules below but must not
+        # affect support, confidence, lift, or token counts during rule fitting.
+        rule_scores = self._build_rule_scores(
+            transactions[observed_user_mask],
+            item_count,
+        )
 
         # Step 7: Apply confidence scores separately for personalized antecedents
         # (liked items and item-cluster presence) and generic antecedents

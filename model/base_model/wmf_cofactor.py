@@ -137,6 +137,7 @@ def _wmf_loss(
 # - context_factors: Current item-context latent factors.
 # - item_biases: Current item-side co-occurrence biases.
 # - context_biases: Current context-side co-occurrence biases.
+# - global_bias: Current global co-occurrence bias.
 # - cooccurrence: CSR item-item SPPMI target matrix.
 # - lambda_rate: Item-factor L2 regularization coefficient.
 # - alpha: Extra confidence assigned to positive L entries.
@@ -148,6 +149,7 @@ def _item_factor_update(
     context_factors: np.ndarray,
     item_biases: np.ndarray,
     context_biases: np.ndarray,
+    global_bias: float,
     cooccurrence: sparse.csr_matrix,
     lambda_rate: float,
     alpha: float,
@@ -190,6 +192,7 @@ def _item_factor_update(
                     cooccurrence.data[start:stop]
                     - item_biases[item_idx]
                     - context_biases[context_idx]
+                    - global_bias
                 )
                 context = context_factors[context_idx]
                 system_matrix += cofactor_weight * (context.T @ context)
@@ -206,6 +209,7 @@ def _item_factor_update(
 # - item_factors: Current item latent factors.
 # - item_biases: Current item-side co-occurrence biases.
 # - context_biases: Current context-side co-occurrence biases.
+# - global_bias: Current global co-occurrence bias.
 # - cooccurrence_t: CSR transposed SPPMI target matrix.
 # - lambda_context_rate: Context-factor L2 regularization coefficient.
 # - gamma: Weight assigned to the co-occurrence term.
@@ -214,6 +218,7 @@ def _context_factor_update(
     item_factors: np.ndarray,
     item_biases: np.ndarray,
     context_biases: np.ndarray,
+    global_bias: float,
     cooccurrence_t: sparse.csr_matrix,
     lambda_context_rate: float,
     gamma: float,
@@ -238,6 +243,7 @@ def _context_factor_update(
                 cooccurrence_t.data[start:stop]
                 - item_biases[item_idx]
                 - context_biases[context_idx]
+                - global_bias
             )
             item = item_factors[item_idx]
             system_matrix += cofactor_weight * (item.T @ item)
@@ -255,12 +261,14 @@ def _context_factor_update(
 # - context_factors: Current context latent factors.
 # - cooccurrence: CSR SPPMI target matrix.
 # - context_biases: Current context-side co-occurrence biases.
+# - global_bias: Current global co-occurrence bias.
 # Output: Updated unregularized item-side co-occurrence biases.
 def _item_bias_update(
     item_factors: np.ndarray,
     context_factors: np.ndarray,
     cooccurrence: sparse.csr_matrix,
     context_biases: np.ndarray,
+    global_bias: float,
 ) -> np.ndarray:
     item_count = cooccurrence.shape[0]
     biases = np.zeros(item_count, dtype=MODEL_DTYPE)
@@ -276,7 +284,12 @@ def _item_bias_update(
 
         targets = cooccurrence.data[start:stop]
         scores = context_factors[context_idx] @ item_factors[item_idx]
-        residual = targets - scores - context_biases[context_idx]
+        residual = (
+            targets
+            - scores
+            - context_biases[context_idx]
+            - global_bias
+        )
         biases[item_idx] = residual.mean()
     return biases
 
@@ -286,12 +299,14 @@ def _item_bias_update(
 # - context_factors: Current context latent factors.
 # - cooccurrence_t: CSR transposed SPPMI target matrix.
 # - item_biases: Current item-side co-occurrence biases.
+# - global_bias: Current global co-occurrence bias.
 # Output: Updated unregularized context-side co-occurrence biases.
 def _context_bias_update(
     item_factors: np.ndarray,
     context_factors: np.ndarray,
     cooccurrence_t: sparse.csr_matrix,
     item_biases: np.ndarray,
+    global_bias: float,
 ) -> np.ndarray:
     context_count = cooccurrence_t.shape[0]
     biases = np.zeros(context_count, dtype=MODEL_DTYPE)
@@ -307,9 +322,36 @@ def _context_bias_update(
 
         targets = cooccurrence_t.data[start:stop]
         scores = item_factors[item_idx] @ context_factors[context_idx]
-        residual = targets - scores - item_biases[item_idx]
+        residual = targets - scores - item_biases[item_idx] - global_bias
         biases[context_idx] = residual.mean()
     return biases
+
+
+def _global_bias_update(
+    item_factors: np.ndarray,
+    context_factors: np.ndarray,
+    item_biases: np.ndarray,
+    context_biases: np.ndarray,
+    cooccurrence: sparse.csr_matrix,
+) -> np.float32:
+    """Update the unregularized global bias from all SPPMI residuals."""
+    if cooccurrence.nnz == 0:
+        return MODEL_DTYPE(0.0)
+    residual_sum = 0.0
+    for item_idx in range(cooccurrence.shape[0]):
+        start = cooccurrence.indptr[item_idx]
+        stop = cooccurrence.indptr[item_idx + 1]
+        context_idx = cooccurrence.indices[start:stop]
+        if context_idx.size == 0:
+            continue
+        targets = cooccurrence.data[start:stop]
+        estimates = (
+            context_factors[context_idx] @ item_factors[item_idx]
+            + item_biases[item_idx]
+            + context_biases[context_idx]
+        )
+        residual_sum += float(np.sum(targets - estimates))
+    return MODEL_DTYPE(residual_sum / cooccurrence.nnz)
 
 
 # Inputs:
@@ -317,6 +359,7 @@ def _context_bias_update(
 # - context_factors: Current context latent factors.
 # - item_biases: Current item-side co-occurrence biases.
 # - context_biases: Current context-side co-occurrence biases.
+# - global_bias: Current global co-occurrence bias.
 # - cooccurrence: CSR SPPMI matrix.
 # - gamma: Weight assigned to the co-occurrence term.
 # Output: Gamma-weighted item co-occurrence loss.
@@ -325,6 +368,7 @@ def _cooccurrence_loss(
     context_factors: np.ndarray,
     item_biases: np.ndarray,
     context_biases: np.ndarray,
+    global_bias: float,
     cooccurrence: sparse.csr_matrix,
     gamma: float,
 ) -> float:
@@ -340,7 +384,12 @@ def _cooccurrence_loss(
             continue
         targets = cooccurrence.data[start:stop]
         scores = context_factors[context_idx] @ item_factors[item_idx]
-        scores = scores + item_biases[item_idx] + context_biases[context_idx]
+        scores = (
+            scores
+            + item_biases[item_idx]
+            + context_biases[context_idx]
+            + global_bias
+        )
         loss += float(np.sum((targets - scores) ** 2))
     return float(gamma) * loss
 
@@ -407,25 +456,31 @@ class WMF_Cofactor:
             raise ValueError("gamma must be finite and >= 0.")
         if not np.isfinite(self.negative_samples) or self.negative_samples < 1.0:
             raise ValueError("negative_samples must be finite and >= 1.")
-        # Step 2: Initialize reproducible user, item, and context factors.
-        rng = np.random.RandomState(self.random_state)
+        # Step 2: Use independent deterministic streams so padding extra users
+        # cannot change the initial item or context factors.
+        user_rng = np.random.RandomState(self.random_state)
+        item_rng = np.random.RandomState((self.random_state + 104729) % (2**32))
+        context_rng = np.random.RandomState(
+            (self.random_state + 209759) % (2**32)
+        )
         self.P = _initialize_factors(
             self.user_count,
             self.K,
-            rng,
+            user_rng,
         )
         self.Q = _initialize_factors(
             self.item_count,
             self.K,
-            rng,
+            item_rng,
         )
         self.Z = _initialize_factors(
             self.item_count,
             self.K,
-            rng,
+            context_rng,
         )
         self.item_biases = np.zeros(self.item_count, dtype=MODEL_DTYPE)
         self.context_biases = np.zeros(self.item_count, dtype=MODEL_DTYPE)
+        self.global_bias = MODEL_DTYPE(0.0)
 
     # Inputs: None; reads model dimensions from this instance.
     # Output: A (user_count, item_count) tuple.
@@ -486,6 +541,7 @@ class WMF_Cofactor:
         if not has_cofactor:
             self.item_biases.fill(0.0)
             self.context_biases.fill(0.0)
+            self.global_bias = MODEL_DTYPE(0.0)
 
         # Step 3: Alternate user, item, and context updates.
         for sweep_idx in range(n_sweeps):
@@ -503,6 +559,7 @@ class WMF_Cofactor:
                 self.Z,
                 self.item_biases,
                 self.context_biases,
+                self.global_bias,
                 cooccurrence,
                 self.lambda_rate,
                 self.alpha,
@@ -515,6 +572,7 @@ class WMF_Cofactor:
                     self.Q,
                     self.item_biases,
                     self.context_biases,
+                    self.global_bias,
                     cooccurrence_t,
                     self.lambda_context_rate,
                     self.gamma,
@@ -524,12 +582,21 @@ class WMF_Cofactor:
                     self.Z,
                     cooccurrence,
                     self.context_biases,
+                    self.global_bias,
                 )
                 self.context_biases = _context_bias_update(
                     self.Q,
                     self.Z,
                     cooccurrence_t,
                     self.item_biases,
+                    self.global_bias,
+                )
+                self.global_bias = _global_bias_update(
+                    self.Q,
+                    self.Z,
+                    self.item_biases,
+                    self.context_biases,
+                    cooccurrence,
                 )
 
             if _should_report_sweep(sweep_idx, verbose_every):
@@ -545,6 +612,7 @@ class WMF_Cofactor:
                     self.Z,
                     self.item_biases,
                     self.context_biases,
+                    self.global_bias,
                     cooccurrence,
                     self.gamma,
                 )

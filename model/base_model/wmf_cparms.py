@@ -219,10 +219,12 @@ class WMF_CPARMS:
         if not np.isfinite(self.gamma) or self.gamma < 0.0:
             raise ValueError("gamma must be finite and >= 0.")
 
-        # Step 2: Initialize reproducible user and item latent factors.
-        rng = np.random.RandomState(self.random_state)
-        self.P = _initialize_factors(self.user_count, self.K, rng)
-        self.Q = _initialize_factors(self.item_count, self.K, rng)
+        # Step 2: Use independent deterministic streams so padding extra users
+        # cannot change the initial item factors.
+        user_rng = np.random.RandomState(self.random_state)
+        item_rng = np.random.RandomState((self.random_state + 104729) % (2**32))
+        self.P = _initialize_factors(self.user_count, self.K, user_rng)
+        self.Q = _initialize_factors(self.item_count, self.K, item_rng)
 
     # Inputs: None; reads model dimensions from this instance.
     # Output: A (user_count, item_count) tuple.
@@ -233,6 +235,8 @@ class WMF_CPARMS:
     # Inputs:
     # - Y: Dense or sparse user-item interaction matrix.
     # - S: Dense or sparse CPARMS signal matrix with the model shape.
+    # - fit_user_mask: Optional boolean mask selecting users allowed to update shared
+    #   item factors. Excluded users are folded in after training with item factors fixed.
     # - n_sweeps: Number of full user/item ALS update sweeps.
     # - verbose_every: Positive interval controlling loss reporting.
     # Output: This fitted WMF_CPARMS instance.
@@ -242,6 +246,7 @@ class WMF_CPARMS:
         S,
         n_sweeps: int,
         verbose_every: int = 5,
+        fit_user_mask=None,
     ):
         n_sweeps, verbose_every = _validate_training_schedule(
             n_sweeps, verbose_every
@@ -254,26 +259,45 @@ class WMF_CPARMS:
         if L.shape != self.shape:
             raise ValueError(f"Y must be shape {self.shape}.")
 
-        # Step 2: Transpose L and signal matrices for item updates.
-        L_T = L.T.tocsr()
-        signal_t = signal.T.tocsr()
+        # Step 2: Select the fit users that may update shared item parameters.
+        if fit_user_mask is None:
+            fit_user_mask = np.ones(self.user_count, dtype=bool)
+        else:
+            fit_user_mask = np.asarray(fit_user_mask)
+            if fit_user_mask.shape != (self.user_count,):
+                raise ValueError(
+                    f"fit_user_mask must be shape ({self.user_count},)."
+                )
+            if fit_user_mask.dtype != np.bool_:
+                raise ValueError("fit_user_mask must contain boolean values.")
+            fit_user_mask = fit_user_mask.copy()
+        if not np.any(fit_user_mask):
+            raise ValueError("fit_user_mask must select at least one user.")
 
-        # Step 3: Alternate user-factor and item-factor least-squares updates.
+        fit_L = L[fit_user_mask].tocsr()
+        fit_signal = signal[fit_user_mask].tocsr()
+        fit_L_T = fit_L.T.tocsr()
+        fit_signal_t = fit_signal.T.tocsr()
+
+        # Step 3: Alternate updates using fit users only, so padded evaluation users
+        # cannot change shared item factors or the fitted objective.
         for sweep_idx in range(n_sweeps):
-            # Step 3.1: Update users from interactions, signal, and fixed item factors.
-            self.P = _als_factor_update(
-                L,
-                signal,
+            # Step 3.1: Update fit-user factors with item factors fixed.
+            fit_user_factors = _als_factor_update(
+                fit_L,
+                fit_signal,
                 self.Q,
                 self.lambda_rate,
                 self.alpha,
                 self.gamma,
             )
-            # Step 3.2: Update items from transposed inputs and fixed user factors.
+            self.P[fit_user_mask] = fit_user_factors
+
+            # Step 3.2: Update items from fit users only.
             self.Q = _als_factor_update(
-                L_T,
-                signal_t,
-                self.P,
+                fit_L_T,
+                fit_signal_t,
+                fit_user_factors,
                 self.lambda_rate,
                 self.alpha,
                 self.gamma,
@@ -282,19 +306,19 @@ class WMF_CPARMS:
             if _should_report_sweep(sweep_idx, verbose_every):
                 # Step 3.3: Calculate WMF, signal, regularization, and total losses.
                 wmf_loss = _wmf_loss(
-                    self.P,
+                    fit_user_factors,
                     self.Q,
-                    L,
+                    fit_L,
                     self.alpha,
                 )
                 signal_loss = _signal_loss(
-                    self.P,
+                    fit_user_factors,
                     self.Q,
-                    signal,
+                    fit_signal,
                     self.gamma,
                 )
                 l2_sum = float(
-                    np.sum(self.P * self.P)
+                    np.sum(fit_user_factors * fit_user_factors)
                     + np.sum(self.Q * self.Q)
                 )
                 regularization = self.lambda_rate * l2_sum
@@ -307,6 +331,19 @@ class WMF_CPARMS:
                     f"REG: {regularization:.6f} "
                     f"TOTAL: {total_loss:.6f}"
                 )
+
+        # Step 4: Infer excluded cold-user factors from the learned CPARMS signal
+        # while keeping the shared item factors fixed.
+        cold_user_mask = ~fit_user_mask
+        if np.any(cold_user_mask):
+            self.P[cold_user_mask] = _als_factor_update(
+                L[cold_user_mask].tocsr(),
+                signal[cold_user_mask].tocsr(),
+                self.Q,
+                self.lambda_rate,
+                self.alpha,
+                self.gamma,
+            )
         return self
 
     # Inputs:

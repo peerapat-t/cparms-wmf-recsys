@@ -166,10 +166,12 @@ class WMF_Standard:
         if not np.isfinite(self.alpha) or self.alpha < 0.0:
             raise ValueError("alpha must be finite and >= 0.")
 
-        # Step 2: Initialize reproducible user and item latent factors.
-        rng = np.random.RandomState(self.random_state)
-        self.P = _initialize_factors(self.user_count, self.K, rng)
-        self.Q = _initialize_factors(self.item_count, self.K, rng)
+        # Step 2: Use independent deterministic streams so padding extra users
+        # cannot change the initial item factors.
+        user_rng = np.random.RandomState(self.random_state)
+        item_rng = np.random.RandomState((self.random_state + 104729) % (2**32))
+        self.P = _initialize_factors(self.user_count, self.K, user_rng)
+        self.Q = _initialize_factors(self.item_count, self.K, item_rng)
 
     # Inputs: None; reads model dimensions from this instance.
     # Output: A (user_count, item_count) tuple.
