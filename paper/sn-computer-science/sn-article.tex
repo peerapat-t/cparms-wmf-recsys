@@ -139,9 +139,9 @@ CPARMS-WMF: Clustering and Pairwise Association Rule Mining Signal for WMF with 
 \abstract{
 Weighted matrix factorization (WMF) struggles when interactions are sparse and side information is not always available. We investigate whether patterns derived only from the interaction matrix can improve personalized Top-$K$ recommendation for users with short positive histories.
 
-We propose CPARMS-WMF, a feature-free framework that clusters users and items from positive feedback, mines single-antecedent rules over user-cluster, liked-item-cluster, and item-level tokens, and incorporates the resulting user--item scores into WMF. We evaluate it on five Amazon datasets using a global temporal split and five random seeds against MostPop, Standard-WMF, and CoFactor-WMF.
+We propose CPARMS-WMF, a feature-free framework that clusters users and items from positive feedback, mines single-antecedent rules over user-cluster, liked-item-cluster, and item-level tokens, and incorporates the resulting user--item scores into WMF. We evaluate it on five Amazon datasets using a global temporal split and five random seeds against MostPop, Standard-WMF, and CoFactor.
 
-CPARMS-WMF wins $73/75$ dataset--seed baseline comparisons: $25/25$ against MostPop and $24/25$ against each WMF baseline. Its mean normalized discounted cumulative gain at cutoff 10 (NDCG@10) is highest on all five datasets. For one-interaction users, it wins $21/25$ comparisons against Standard-WMF, $19/25$ against CoFactor-WMF, and $13/25$ against MostPop.
+CPARMS-WMF wins $73/75$ dataset--seed baseline comparisons: $25/25$ against MostPop and $24/25$ against each WMF baseline. Its mean normalized discounted cumulative gain at cutoff 10 (NDCG@10) is highest on all five datasets. For one-interaction users, it wins $21/25$ comparisons against Standard-WMF, $19/25$ against CoFactor, and $13/25$ against MostPop.
 
 CPARMS-WMF improves ranking over both WMF baselines overall and in most comparisons for one-interaction users, but popularity remains competitive.
 }
@@ -175,7 +175,7 @@ We propose \textbf{CPARMS-WMF}, a feature-free framework for personalized recomm
 
 We evaluate only users and items observed in the fit window. Users and items that appear only in the evaluation window are excluded from training and the candidate set, and their evaluation events are not scored. Among the remaining users, we include only those with at least one positive interaction in the fit window and at least one positive target in the evaluation window. Results are reported overall and separately for users with one, two, and three or more positive interactions.
 
-CPARMS-WMF is compared with three feature-free baselines: a non-personalized popularity baseline (MostPop), Standard-WMF, and CoFactor-WMF.
+CPARMS-WMF is compared with three feature-free baselines: a non-personalized popularity baseline (MostPop), Standard-WMF, and CoFactor.
 
 The main contributions are:
 
@@ -219,7 +219,7 @@ Cross-domain matrix factorization transfers information from related domains by 
 
 Interaction-derived methods draw additional signals from user--item data without requiring external attributes. Clustering-based approaches identify preference structures shared by users or items \cite{mirbakhsh2016leveraging}, while association-rule approaches mine directional item relationships from transaction data. Some studies combine the two techniques or connect one of them to matrix factorization. For example, one approach reduces the dimensionality of the item space through clustering and then applies association rule mining to implicit interactions \cite{najafabadi2017clusteringARM}. CFCAI mines rules between clusters to support cold-start recommendation, while also using demographic and profile information \cite{khaledian2025cfcai}. CoFactor instead adds an item--item co-occurrence term to the factorization objective, supplying information for items with few observed interactions \cite{liang2016cofactor}. To our knowledge, none of the studies reviewed above integrates clustering, association rule mining, and weighted matrix factorization within one model.
 
-CoFactor is a relevant weighted matrix factorization baseline because it links implicit-feedback WMF with an item--item co-occurrence signal derived from the same interaction matrix \cite{liang2016cofactor}. CoFactor-WMF augments Standard-WMF with an item--item shifted positive pointwise mutual information (SPPMI) term. Using the notation of this paper, a CoFactor-style objective is
+CoFactor is a relevant weighted matrix factorization baseline because it links implicit-feedback WMF with an item--item co-occurrence signal derived from the same interaction matrix \cite{liang2016cofactor}. CoFactor augments Standard-WMF with an item--item shifted positive pointwise mutual information (SPPMI) term. Using the notation of this paper, a CoFactor-style objective is
 \begin{equation}
 \begin{aligned}
 \mathcal{L}_{\mathrm{CoFactor}}
@@ -267,11 +267,11 @@ Equation~\eqref{eq:cofactor_objective} keeps the co-occurrence term weighted and
 
 \subsection{How the Proposed Method Differs}
 
-The feature-free methods reviewed above use one or two of clustering, association rule mining, and weighted matrix factorization. CPARMS-WMF combines all three in one framework: clustering provides group-level preference structure shared across the members of each user or item cluster, pairwise association rules provide directional confidence-weighted information, and WMF provides personalized latent-factor ranking. CoFactor-WMF adds SPPMI item co-occurrence to matrix factorization, which makes it a suitable baseline for CPARMS-WMF because both use extra information from the interaction matrix. The main difference is that CoFactor-WMF regularizes shared item embeddings with item-level co-occurrence, while CPARMS builds a user--item signal from item--item, user-cluster--item, and liked-item-cluster--item relations.
+The feature-free methods reviewed above use one or two of clustering, association rule mining, and weighted matrix factorization. CPARMS-WMF combines all three in one framework: clustering provides group-level preference structure shared across the members of each user or item cluster, pairwise association rules provide directional confidence-weighted information, and WMF provides personalized latent-factor ranking. CoFactor adds SPPMI item co-occurrence to matrix factorization, which makes it a suitable baseline for CPARMS-WMF because both use extra information from the interaction matrix. The main difference is that CoFactor regularizes shared item embeddings with item-level co-occurrence, while CPARMS builds a user--item signal from item--item, user-cluster--item, and liked-item-cluster--item relations.
 
 CPARMS uses three token families: user-cluster, liked-item-cluster, and item-level tokens. User-cluster tokens provide a generic signal shared by users in the same cluster, while the other two provide personalized signals based on each user's positive history.
 
-This comparison raises two questions. First, can CPARMS-WMF improve personalized ranking under sparse implicit feedback, beating Standard-WMF, CoFactor-WMF, and the non-personalized popularity baseline? Second, does this improvement remain for users with extremely short histories, including when compared with the popularity baseline? The results in Section~\ref{sec5} support the first claim but only partly support the second.
+This comparison raises two questions. First, can CPARMS-WMF improve personalized ranking under sparse implicit feedback, beating Standard-WMF, CoFactor, and the non-personalized popularity baseline? Second, does this improvement remain for users with extremely short histories, including when compared with the popularity baseline? The results in Section~\ref{sec5} support the first claim but only partly support the second.
 
 
 %%==================================%%
@@ -562,9 +562,9 @@ We compare CPARMS-WMF with three feature-free baselines. Every model uses the sa
 
 \textbf{Standard-WMF} is the implicit-feedback WMF model of Hu et al.~\cite{hu2008implicit}. It uses binary preference $\pi_{ui}=\ell_{ui}$ and confidence $c_{ui}=1+\alpha\pi_{ui}$ and learns user and item factors through $\ell_2$ regularization and ALS.
 
-\textbf{CoFactor-WMF} implements the model in Section~\ref{sec2}. It augments the WMF objective with an item--item SPPMI term over the matrix in Eq.~\eqref{eq:sppmi}. The model uses unit weights on nonzero SPPMI entries, separate context factors, item and context biases, and ALS updates for user, item, context, and bias parameters \cite{liang2016cofactor}.
+\textbf{CoFactor} implements the model in Section~\ref{sec2}. It augments the WMF objective with an item--item SPPMI term over the matrix in Eq.~\eqref{eq:sppmi}. The model uses unit weights on nonzero SPPMI entries, separate context factors, item and context biases, and ALS updates for user, item, context, and bias parameters \cite{liang2016cofactor}.
 
-The search uses CoFactor's original parameters. It samples the relative WMF scale $\ell$ and derives $\gamma_{\mathrm{co}}=1/\ell$ and $\lambda_{\mathrm{ctx}}=\gamma_{\mathrm{co}}\lambda$ instead of treating the co-occurrence weight and context regularizer as independent parameters. Both search grids come directly from the original paper: $\ell\in\{0.01,0.05,0.1,0.5,1,5,10\}$ and the number of negative samples $k\in\{1,2,5,10,50\}$~\cite{liang2016cofactor}. Sampling these quantities independently could assign negligible weight to the co-occurrence term, effectively reducing CoFactor-WMF toward Standard-WMF. We therefore preserve the coupling used in the original parameterization.
+The search uses CoFactor's original parameters. It samples the relative WMF scale $\ell$ and derives $\gamma_{\mathrm{co}}=1/\ell$ and $\lambda_{\mathrm{ctx}}=\gamma_{\mathrm{co}}\lambda$ instead of treating the co-occurrence weight and context regularizer as independent parameters. Both search grids come directly from the original paper: $\ell\in\{0.01,0.05,0.1,0.5,1,5,10\}$ and the number of negative samples $k\in\{1,2,5,10,50\}$~\cite{liang2016cofactor}. Sampling these quantities independently could assign negligible weight to the co-occurrence term, effectively reducing CoFactor toward Standard-WMF. We therefore preserve the coupling used in the original parameterization.
 
 \subsection{Evaluation Metrics}\label{sec4_metrics}
 
@@ -647,11 +647,11 @@ All $\Delta_b$ values are computed from unrounded scores, so they may differ sli
 
 \subsubsection{Performance against the WMF baselines}
 
-At NDCG@10, CPARMS-WMF wins $73$ of the $75$ dataset--seed comparisons against the three baselines (Table~\ref{tab:pairwise_seed_wins}). Against the two WMF baselines alone, it wins $24/25$ comparisons each, has the best overall mean on all five datasets, and improves over Standard-WMF by $+6.4\%$ (Music), $+7.3\%$ (Pantry), $+8.9\%$ (Luxury Beauty), $+32.7\%$ (Instruments), and $+58.4\%$ (Industrial \& Scientific). The gains over CoFactor-WMF are $+5.3\%$ (Music), $+7.4\%$ (Luxury Beauty), $+10.6\%$ (Pantry), $+27.6\%$ (Instruments), and $+55.8\%$ (Industrial \& Scientific). Its only losses occur on Pantry seed $45$ against both WMF baselines. Table~\ref{tab:ndcg_group} provides the corresponding breakdown by positive interaction group. The advantage is not limited to the selection cutoff: Table~\ref{tab:ndcg_cutoffs} shows that CPARMS-WMF has the best overall mean at every cutoff from $10$ to $200$ on all five datasets.
+At NDCG@10, CPARMS-WMF wins $73$ of the $75$ dataset--seed comparisons against the three baselines (Table~\ref{tab:pairwise_seed_wins}). Against the two WMF baselines alone, it wins $24/25$ comparisons each, has the best overall mean on all five datasets, and improves over Standard-WMF by $+6.4\%$ (Music), $+7.3\%$ (Pantry), $+8.9\%$ (Luxury Beauty), $+32.7\%$ (Instruments), and $+58.4\%$ (Industrial \& Scientific). The gains over CoFactor are $+5.3\%$ (Music), $+7.4\%$ (Luxury Beauty), $+10.6\%$ (Pantry), $+27.6\%$ (Instruments), and $+55.8\%$ (Industrial \& Scientific). Its only losses occur on Pantry seed $45$ against both WMF baselines. Table~\ref{tab:ndcg_group} provides the corresponding breakdown by positive interaction group. The advantage is not limited to the selection cutoff: Table~\ref{tab:ndcg_cutoffs} shows that CPARMS-WMF has the best overall mean at every cutoff from $10$ to $200$ on all five datasets.
 
 \subsubsection{Performance against popularity}
 
-MostPop remains an important reference because it beats both WMF baselines overall on Industrial \& Scientific and Instruments. Even so, CPARMS-WMF beats MostPop in all $25$ overall dataset--seed runs and has a higher mean on every dataset. Its improvement ranges from $+12.2\%$ on Industrial \& Scientific to $+1724.4\%$ on Luxury Beauty. MostPop's near-zero NDCG@10 ($0.25\%$) causes the very large percentage on Luxury Beauty, where the popularity baseline is weakest. When we weight the five dataset means equally, CPARMS-WMF reaches $2.79\%$, compared with $2.32\%$ for Standard-WMF, $2.35\%$ for CoFactor-WMF, and $1.36\%$ for MostPop.
+MostPop remains an important reference because it beats both WMF baselines overall on Industrial \& Scientific and Instruments. Even so, CPARMS-WMF beats MostPop in all $25$ overall dataset--seed runs and has a higher mean on every dataset. Its improvement ranges from $+12.2\%$ on Industrial \& Scientific to $+1724.4\%$ on Luxury Beauty. MostPop's near-zero NDCG@10 ($0.25\%$) causes the very large percentage on Luxury Beauty, where the popularity baseline is weakest. When we weight the five dataset means equally, CPARMS-WMF reaches $2.79\%$, compared with $2.32\%$ for Standard-WMF, $2.35\%$ for CoFactor, and $1.36\%$ for MostPop.
 
 \begin{table}[!ht]
 \caption{Pairwise NDCG@10 wins by CPARMS-WMF across the $25$ dataset--seed runs. Each cell reports wins out of $25$ using unrounded scores. The one-interaction row covers users with exactly one positive interaction}
@@ -659,7 +659,7 @@ MostPop remains an important reference because it beats both WMF baselines overa
 \centering
 \begin{tabular}{lccc}
 \toprule
-Positive interaction group & vs. MostPop & vs. Standard-WMF & vs. CoFactor-WMF \\
+Positive interaction group & vs. MostPop & vs. Standard-WMF & vs. CoFactor \\
 \midrule
 All users & 25 & 24 & 24 \\
 $1$ interaction & 13 & 21 & 19 \\
@@ -671,13 +671,13 @@ $3^{+}$ interactions & 25 & 23 & 24 \\
 
 \subsection{Positive Interaction Groups}
 
-Table~\ref{tab:ndcg_group} divides users by the number of positive interactions. For users with one positive interaction, CPARMS-WMF beats Standard-WMF in $21/25$ runs and CoFactor-WMF in $19/25$. Its largest mean gains over Standard-WMF occur on Industrial \& Scientific ($+142.6\%$) and Instruments ($+68.2\%$). The gains are not uniform, however. On Luxury Beauty, the mean for users with one positive interaction is lower than both WMF baselines ($9.24$ versus $9.53$ and $9.79$), with only $2/5$ seed wins against each; on Music, it is lower than CoFactor-WMF. Results against MostPop are mixed: CPARMS-WMF wins $13/25$ runs for users with one positive interaction and has the best mean for these users only on Pantry. The evidence therefore supports an improvement over the two WMF baselines in most runs for users with one positive interaction, but not on every dataset and not consistently over popularity.
+Table~\ref{tab:ndcg_group} divides users by the number of positive interactions. For users with one positive interaction, CPARMS-WMF beats Standard-WMF in $21/25$ runs and CoFactor in $19/25$. Its largest mean gains over Standard-WMF occur on Industrial \& Scientific ($+142.6\%$) and Instruments ($+68.2\%$). The gains are not uniform, however. On Luxury Beauty, the mean for users with one positive interaction is lower than both WMF baselines ($9.24$ versus $9.53$ and $9.79$), with only $2/5$ seed wins against each; on Music, it is lower than CoFactor. Results against MostPop are mixed: CPARMS-WMF wins $13/25$ runs for users with one positive interaction and has the best mean for these users only on Pantry. The evidence therefore supports an improvement over the two WMF baselines in most runs for users with one positive interaction, but not on every dataset and not consistently over popularity.
 
-At two interactions, CPARMS-WMF wins $22/25$ against Standard-WMF, $23/25$ against CoFactor-WMF, and $18/25$ against MostPop, and has the best mean on three datasets; the two remaining best means go to MostPop on Industrial \& Scientific and CoFactor-WMF on Pantry. At three or more interactions, it has the best mean on all five datasets and wins $25/25$ against MostPop, $23/25$ against Standard-WMF, and $24/25$ against CoFactor-WMF. This pattern fits the method design: item-level and liked-item-cluster antecedents provide more user-specific information as $n_u$ grows.
+At two interactions, CPARMS-WMF wins $22/25$ against Standard-WMF, $23/25$ against CoFactor, and $18/25$ against MostPop, and has the best mean on three datasets; the two remaining best means go to MostPop on Industrial \& Scientific and CoFactor on Pantry. At three or more interactions, it has the best mean on all five datasets and wins $25/25$ against MostPop, $23/25$ against Standard-WMF, and $24/25$ against CoFactor. This pattern fits the method design: item-level and liked-item-cluster antecedents provide more user-specific information as $n_u$ grows.
 
 \subsection{Computational Cost}
 
-Table~\ref{tab:runtime} reports training time measured on a machine with an AMD Ryzen 5 7535U processor and 32~GB of RAM. CPARMS-WMF costs more to train than either WMF baseline: total time ranges from $0.334$ minutes on Luxury Beauty to $8.818$ minutes on Instruments. This is $3.1$--$14.2\times$ the training time of Standard-WMF and $2.1$--$6.6\times$ that of CoFactor-WMF. Most of the extra time comes from denser signal-regularized ALS updates rather than signal construction.
+Table~\ref{tab:runtime} reports training time measured on a machine with an AMD Ryzen 5 7535U processor and 32~GB of RAM. CPARMS-WMF costs more to train than either WMF baseline: total time ranges from $0.334$ minutes on Luxury Beauty to $8.818$ minutes on Instruments. This is $3.1$--$14.2\times$ the training time of Standard-WMF and $2.1$--$6.6\times$ that of CoFactor. Most of the extra time comes from denser signal-regularized ALS updates rather than signal construction.
 
 \subsection{Hyperparameter Behavior}
 
@@ -713,27 +713,27 @@ Dataset & Model & All & $1$ & $2$ & $3^{+}$ \\
 \midrule
 Luxury Beauty & MostPop & 0.25 $\pm$ 0.00 & 1.09 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.18 $\pm$ 0.00 \\
               & Standard-WMF & 4.27 $\pm$ 0.26 & \underline{9.53} $\pm$ 0.41 & \underline{5.35} $\pm$ 0.71 & 3.32 $\pm$ 0.23 \\
-              & CoFactor-WMF & \underline{4.33} $\pm$ 0.26 & \textbf{9.79} $\pm$ 0.41 & 5.31 $\pm$ 0.72 & \underline{3.37} $\pm$ 0.25 \\
+              & CoFactor & \underline{4.33} $\pm$ 0.26 & \textbf{9.79} $\pm$ 0.41 & 5.31 $\pm$ 0.72 & \underline{3.37} $\pm$ 0.25 \\
               & CPARMS-WMF & \textbf{4.65} $\pm$ 0.18 & 9.24 $\pm$ 0.79 & \textbf{5.76} $\pm$ 0.71 & \textbf{3.79} $\pm$ 0.18 \\
 \midrule
 Industrial \& Scientific & MostPop & \underline{2.58} $\pm$ 0.00 & \textbf{6.87} $\pm$ 0.00 & \textbf{4.83} $\pm$ 0.00 & 1.33 $\pm$ 0.00 \\
               & Standard-WMF & 1.83 $\pm$ 0.11 & 2.71 $\pm$ 0.16 & 1.95 $\pm$ 0.22 & 1.65 $\pm$ 0.19 \\
-              & CoFactor-WMF & 1.86 $\pm$ 0.04 & 2.78 $\pm$ 0.22 & 1.98 $\pm$ 0.29 & \underline{1.68} $\pm$ 0.09 \\
+              & CoFactor & 1.86 $\pm$ 0.04 & 2.78 $\pm$ 0.22 & 1.98 $\pm$ 0.29 & \underline{1.68} $\pm$ 0.09 \\
               & CPARMS-WMF & \textbf{2.89} $\pm$ 0.05 & \underline{6.58} $\pm$ 0.17 & \underline{4.36} $\pm$ 0.22 & \textbf{1.93} $\pm$ 0.06 \\
 \midrule
 Pantry        & MostPop & 1.44 $\pm$ 0.00 & \underline{2.11} $\pm$ 0.00 & 1.72 $\pm$ 0.00 & 1.27 $\pm$ 0.00 \\
               & Standard-WMF & \underline{1.84} $\pm$ 0.07 & 1.75 $\pm$ 0.28 & 1.68 $\pm$ 0.09 & \underline{1.88} $\pm$ 0.05 \\
-              & CoFactor-WMF & 1.78 $\pm$ 0.17 & 1.54 $\pm$ 0.10 & \textbf{1.81} $\pm$ 0.33 & 1.82 $\pm$ 0.17 \\
+              & CoFactor & 1.78 $\pm$ 0.17 & 1.54 $\pm$ 0.10 & \textbf{1.81} $\pm$ 0.33 & 1.82 $\pm$ 0.17 \\
               & CPARMS-WMF & \textbf{1.97} $\pm$ 0.11 & \textbf{2.23} $\pm$ 0.16 & \underline{1.75} $\pm$ 0.19 & \textbf{1.97} $\pm$ 0.13 \\
 \midrule
 Music         & MostPop & 0.44 $\pm$ 0.00 & 0.59 $\pm$ 0.00 & 0.43 $\pm$ 0.00 & 0.41 $\pm$ 0.00 \\
               & Standard-WMF & 1.72 $\pm$ 0.05 & 1.74 $\pm$ 0.12 & 2.73 $\pm$ 0.24 & 1.53 $\pm$ 0.05 \\
-              & CoFactor-WMF & \underline{1.74} $\pm$ 0.05 & \textbf{1.87} $\pm$ 0.21 & \underline{2.73} $\pm$ 0.12 & \underline{1.53} $\pm$ 0.05 \\
+              & CoFactor & \underline{1.74} $\pm$ 0.05 & \textbf{1.87} $\pm$ 0.21 & \underline{2.73} $\pm$ 0.12 & \underline{1.53} $\pm$ 0.05 \\
               & CPARMS-WMF & \textbf{1.83} $\pm$ 0.04 & \underline{1.76} $\pm$ 0.14 & \textbf{2.96} $\pm$ 0.13 & \textbf{1.63} $\pm$ 0.05 \\
 \midrule
 Instruments   & MostPop & \underline{2.11} $\pm$ 0.00 & \textbf{4.58} $\pm$ 0.00 & \underline{2.93} $\pm$ 0.00 & 1.56 $\pm$ 0.00 \\
               & Standard-WMF & 1.95 $\pm$ 0.04 & 2.29 $\pm$ 0.19 & 2.14 $\pm$ 0.15 & 1.86 $\pm$ 0.05 \\
-              & CoFactor-WMF & 2.03 $\pm$ 0.07 & 2.35 $\pm$ 0.21 & 2.22 $\pm$ 0.09 & \underline{1.94} $\pm$ 0.10 \\
+              & CoFactor & 2.03 $\pm$ 0.07 & 2.35 $\pm$ 0.21 & 2.22 $\pm$ 0.09 & \underline{1.94} $\pm$ 0.10 \\
               & CPARMS-WMF & \textbf{2.59} $\pm$ 0.10 & \underline{3.85} $\pm$ 0.48 & \textbf{3.19} $\pm$ 0.12 & \textbf{2.27} $\pm$ 0.08 \\
 \botrule
 \end{tabular*}
@@ -753,27 +753,27 @@ Dataset & Model & NDCG@10 & NDCG@20 & NDCG@50 & NDCG@100 & NDCG@200 \\
 \midrule
 Luxury Beauty & MostPop & 0.25 $\pm$ 0.00 & 1.43 $\pm$ 0.00 & 2.94 $\pm$ 0.00 & 3.49 $\pm$ 0.00 & 4.42 $\pm$ 0.00 \\
               & Standard-WMF & 4.27 $\pm$ 0.26 & 4.96 $\pm$ 0.22 & 6.08 $\pm$ 0.21 & 6.88 $\pm$ 0.21 & 7.87 $\pm$ 0.19 \\
-              & CoFactor-WMF & \underline{4.33} $\pm$ 0.26 & \underline{4.97} $\pm$ 0.26 & \underline{6.09} $\pm$ 0.19 & \underline{6.90} $\pm$ 0.15 & \underline{7.97} $\pm$ 0.15 \\
+              & CoFactor & \underline{4.33} $\pm$ 0.26 & \underline{4.97} $\pm$ 0.26 & \underline{6.09} $\pm$ 0.19 & \underline{6.90} $\pm$ 0.15 & \underline{7.97} $\pm$ 0.15 \\
               & CPARMS-WMF & \textbf{4.65} $\pm$ 0.18 & \textbf{5.43} $\pm$ 0.17 & \textbf{6.58} $\pm$ 0.19 & \textbf{7.46} $\pm$ 0.25 & \textbf{8.53} $\pm$ 0.20 \\
 \midrule
 Industrial \& Scientific & MostPop & \underline{2.58} $\pm$ 0.00 & \underline{3.01} $\pm$ 0.00 & \underline{3.81} $\pm$ 0.00 & \underline{4.54} $\pm$ 0.00 & \underline{5.40} $\pm$ 0.00 \\
               & Standard-WMF & 1.83 $\pm$ 0.11 & 2.35 $\pm$ 0.11 & 3.20 $\pm$ 0.09 & 4.01 $\pm$ 0.07 & 4.97 $\pm$ 0.10 \\
-              & CoFactor-WMF & 1.86 $\pm$ 0.04 & 2.35 $\pm$ 0.06 & 3.23 $\pm$ 0.14 & 4.02 $\pm$ 0.14 & 4.98 $\pm$ 0.19 \\
+              & CoFactor & 1.86 $\pm$ 0.04 & 2.35 $\pm$ 0.06 & 3.23 $\pm$ 0.14 & 4.02 $\pm$ 0.14 & 4.98 $\pm$ 0.19 \\
               & CPARMS-WMF & \textbf{2.89} $\pm$ 0.05 & \textbf{3.47} $\pm$ 0.10 & \textbf{4.40} $\pm$ 0.22 & \textbf{5.20} $\pm$ 0.29 & \textbf{6.17} $\pm$ 0.37 \\
 \midrule
 Pantry        & MostPop & 1.44 $\pm$ 0.00 & 2.07 $\pm$ 0.00 & 3.20 $\pm$ 0.00 & 4.47 $\pm$ 0.00 & \underline{5.90} $\pm$ 0.00 \\
               & Standard-WMF & \underline{1.84} $\pm$ 0.07 & \underline{2.37} $\pm$ 0.07 & \underline{3.46} $\pm$ 0.08 & \underline{4.48} $\pm$ 0.14 & 5.79 $\pm$ 0.19 \\
-              & CoFactor-WMF & 1.78 $\pm$ 0.17 & 2.35 $\pm$ 0.14 & 3.39 $\pm$ 0.11 & 4.44 $\pm$ 0.14 & 5.71 $\pm$ 0.13 \\
+              & CoFactor & 1.78 $\pm$ 0.17 & 2.35 $\pm$ 0.14 & 3.39 $\pm$ 0.11 & 4.44 $\pm$ 0.14 & 5.71 $\pm$ 0.13 \\
               & CPARMS-WMF & \textbf{1.97} $\pm$ 0.11 & \textbf{2.56} $\pm$ 0.09 & \textbf{3.76} $\pm$ 0.12 & \textbf{5.00} $\pm$ 0.21 & \textbf{6.42} $\pm$ 0.36 \\
 \midrule
 Music         & MostPop & 0.44 $\pm$ 0.00 & 0.64 $\pm$ 0.00 & 0.98 $\pm$ 0.00 & 1.51 $\pm$ 0.00 & 2.00 $\pm$ 0.00 \\
               & Standard-WMF & 1.72 $\pm$ 0.05 & 2.19 $\pm$ 0.07 & 3.06 $\pm$ 0.07 & \underline{3.98} $\pm$ 0.09 & \underline{5.09} $\pm$ 0.10 \\
-              & CoFactor-WMF & \underline{1.74} $\pm$ 0.05 & \underline{2.22} $\pm$ 0.09 & \underline{3.06} $\pm$ 0.07 & 3.97 $\pm$ 0.09 & 5.06 $\pm$ 0.10 \\
+              & CoFactor & \underline{1.74} $\pm$ 0.05 & \underline{2.22} $\pm$ 0.09 & \underline{3.06} $\pm$ 0.07 & 3.97 $\pm$ 0.09 & 5.06 $\pm$ 0.10 \\
               & CPARMS-WMF & \textbf{1.83} $\pm$ 0.04 & \textbf{2.31} $\pm$ 0.04 & \textbf{3.20} $\pm$ 0.07 & \textbf{4.19} $\pm$ 0.06 & \textbf{5.32} $\pm$ 0.03 \\
 \midrule
 Instruments   & MostPop & \underline{2.11} $\pm$ 0.00 & 2.59 $\pm$ 0.00 & 3.60 $\pm$ 0.00 & 4.46 $\pm$ 0.00 & 5.42 $\pm$ 0.00 \\
               & Standard-WMF & 1.95 $\pm$ 0.04 & 2.62 $\pm$ 0.06 & 3.65 $\pm$ 0.08 & \underline{4.62} $\pm$ 0.10 & \underline{5.72} $\pm$ 0.14 \\
-              & CoFactor-WMF & 2.03 $\pm$ 0.07 & \underline{2.64} $\pm$ 0.05 & \underline{3.65} $\pm$ 0.08 & 4.60 $\pm$ 0.13 & 5.69 $\pm$ 0.19 \\
+              & CoFactor & 2.03 $\pm$ 0.07 & \underline{2.64} $\pm$ 0.05 & \underline{3.65} $\pm$ 0.08 & 4.60 $\pm$ 0.13 & 5.69 $\pm$ 0.19 \\
               & CPARMS-WMF & \textbf{2.59} $\pm$ 0.10 & \textbf{3.35} $\pm$ 0.10 & \textbf{4.51} $\pm$ 0.13 & \textbf{5.51} $\pm$ 0.18 & \textbf{6.60} $\pm$ 0.27 \\
 \botrule
 \end{tabular*}
@@ -795,27 +795,27 @@ Dataset & Model & Signal & ALS training & Total \\
 \midrule
 Luxury Beauty & MostPop & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 \\
               & Standard-WMF & 0.000 $\pm$ 0.000 & 0.108 $\pm$ 0.028 & 0.108 $\pm$ 0.028 \\
-              & CoFactor-WMF & 0.000 $\pm$ 0.000 & 0.162 $\pm$ 0.019 & 0.162 $\pm$ 0.019 \\
+              & CoFactor & 0.000 $\pm$ 0.000 & 0.162 $\pm$ 0.019 & 0.162 $\pm$ 0.019 \\
               & CPARMS-WMF & 0.010 $\pm$ 0.002 & 0.324 $\pm$ 0.107 & 0.334 $\pm$ 0.105 \\
 \midrule
 Industrial \& Scientific & MostPop & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 \\
               & Standard-WMF & 0.000 $\pm$ 0.000 & 0.344 $\pm$ 0.142 & 0.344 $\pm$ 0.142 \\
-              & CoFactor-WMF & 0.001 $\pm$ 0.000 & 0.533 $\pm$ 0.181 & 0.534 $\pm$ 0.181 \\
+              & CoFactor & 0.001 $\pm$ 0.000 & 0.533 $\pm$ 0.181 & 0.534 $\pm$ 0.181 \\
               & CPARMS-WMF & 0.052 $\pm$ 0.017 & 2.251 $\pm$ 0.976 & 2.303 $\pm$ 0.991 \\
 \midrule
 Pantry        & MostPop & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 \\
               & Standard-WMF & 0.000 $\pm$ 0.000 & 0.329 $\pm$ 0.114 & 0.329 $\pm$ 0.114 \\
-              & CoFactor-WMF & 0.002 $\pm$ 0.000 & 0.629 $\pm$ 0.174 & 0.631 $\pm$ 0.174 \\
+              & CoFactor & 0.002 $\pm$ 0.000 & 0.629 $\pm$ 0.174 & 0.631 $\pm$ 0.174 \\
               & CPARMS-WMF & 0.073 $\pm$ 0.029 & 2.379 $\pm$ 0.806 & 2.452 $\pm$ 0.832 \\
 \midrule
 Music         & MostPop & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 \\
               & Standard-WMF & 0.000 $\pm$ 0.000 & 0.523 $\pm$ 0.156 & 0.523 $\pm$ 0.156 \\
-              & CoFactor-WMF & 0.003 $\pm$ 0.000 & 1.145 $\pm$ 0.271 & 1.148 $\pm$ 0.271 \\
+              & CoFactor & 0.003 $\pm$ 0.000 & 1.145 $\pm$ 0.271 & 1.148 $\pm$ 0.271 \\
               & CPARMS-WMF & 0.086 $\pm$ 0.051 & 4.219 $\pm$ 2.656 & 4.305 $\pm$ 2.707 \\
 \midrule
 Instruments   & MostPop & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 & 0.000 $\pm$ 0.000 \\
               & Standard-WMF & 0.000 $\pm$ 0.000 & 0.619 $\pm$ 0.197 & 0.619 $\pm$ 0.197 \\
-              & CoFactor-WMF & 0.003 $\pm$ 0.000 & 1.341 $\pm$ 0.279 & 1.344 $\pm$ 0.279 \\
+              & CoFactor & 0.003 $\pm$ 0.000 & 1.341 $\pm$ 0.279 & 1.344 $\pm$ 0.279 \\
               & CPARMS-WMF & 0.217 $\pm$ 0.174 & 8.602 $\pm$ 6.372 & 8.818 $\pm$ 6.542 \\
 \botrule
 \end{tabular*}
@@ -886,15 +886,15 @@ Instruments & 42 & 30 & 0.01 & 15 & 80 & 4 & 1 & 3 & 0.0001 & 0.0005 & 0 & row \
 
 CPARMS-WMF has higher mean NDCG@10 than both WMF baselines on all five datasets, with the largest gains on Industrial \& Scientific and Instruments. These are also the domains in which popularity is relatively strong, suggesting that the generic component may help when sparse histories make the WMF estimates less reliable.
 
-CoFactor-WMF is the closest baseline because both models are feature-free extensions of the same WMF objective. CoFactor-WMF slightly exceeds Standard-WMF on four of the five dataset means, whereas CPARMS-WMF exceeds CoFactor-WMF on all five means and in $24/25$ runs. Under this evaluation, CPARMS-WMF outperforms CoFactor-WMF.
+CoFactor is the closest baseline because both models are feature-free extensions of the same WMF objective. CoFactor slightly exceeds Standard-WMF on four of the five dataset means, whereas CPARMS-WMF exceeds CoFactor on all five means and in $24/25$ runs. Under this evaluation, CPARMS-WMF outperforms CoFactor.
 
 Performance for the one-interaction group is less consistent. CPARMS-WMF generally improves on the WMF baselines but does not consistently outperform MostPop, indicating that one positive interaction may provide too little user-specific information in popularity-dominated domains.
 
-The advantage over the WMF baselines grows as the number of positive interactions increases. At two interactions, CPARMS-WMF wins $22/25$ comparisons against Standard-WMF and $23/25$ against CoFactor-WMF. At three or more interactions, it has the best mean on all datasets. However, MostPop beats both WMF baselines overall on Industrial \& Scientific and Instruments.
+The advantage over the WMF baselines grows as the number of positive interactions increases. At two interactions, CPARMS-WMF wins $22/25$ comparisons against Standard-WMF and $23/25$ against CoFactor. At three or more interactions, it has the best mean on all datasets. However, MostPop beats both WMF baselines overall on Industrial \& Scientific and Instruments.
 
 On Industrial \& Scientific, where popularity is strongest and both WMF baselines trail MostPop, validation selects $K_U=1$ in all five runs (Section~\ref{sec5}). The generic component then becomes a popularity-like prior, and CPARMS-WMF is the only personalized model to beat MostPop. Validation selects $K_U>1$ on Music and in four of the five Luxury Beauty runs. As $n_u$ grows, users activate more item and liked-item-cluster tokens, increasing the personalized part of the signal (Section~\ref{sec3}). CPARMS-WMF can thus use a popularity-like component in a popularity-dominated domain while retaining cluster- and item-level information elsewhere.
 
-The size and source of the gain vary across datasets. Music has the smallest CPARMS-WMF margin over Standard-WMF ($+6.4\%$), while Industrial \& Scientific has the largest ($+58.4\%$). The strongest competitor for users with one positive interaction also varies by domain: CoFactor-WMF on Luxury Beauty and Music, while popularity remains difficult to beat for these users on Industrial \& Scientific and Instruments. Pantry is the only dataset where CPARMS-WMF has the best mean for users with one positive interaction.
+The size and source of the gain vary across datasets. Music has the smallest CPARMS-WMF margin over Standard-WMF ($+6.4\%$), while Industrial \& Scientific has the largest ($+58.4\%$). The strongest competitor for users with one positive interaction also varies by domain: CoFactor on Luxury Beauty and Music, while popularity remains difficult to beat for these users on Industrial \& Scientific and Instruments. Pantry is the only dataset where CPARMS-WMF has the best mean for users with one positive interaction.
 
 
 %%==================================%%
@@ -906,7 +906,7 @@ The size and source of the gain vary across datasets. Music has the smallest CPA
 This study has three main limitations.
 
 \begin{enumerate}
-\item \textbf{Popularity stays competitive at the shortest histories.} CPARMS-WMF improves over Standard-WMF and CoFactor-WMF in most comparisons for users with one positive interaction. However, MostPop has the best mean for users with one positive interaction on Industrial \& Scientific and Instruments and the best mean for users with two positive interactions on Industrial \& Scientific. As a result, the method improves on the WMF baselines but does not always beat a non-personalized baseline.
+\item \textbf{Popularity stays competitive at the shortest histories.} CPARMS-WMF improves over Standard-WMF and CoFactor in most comparisons for users with one positive interaction. However, MostPop has the best mean for users with one positive interaction on Industrial \& Scientific and Instruments and the best mean for users with two positive interactions on Industrial \& Scientific. As a result, the method improves on the WMF baselines but does not always beat a non-personalized baseline.
 
 \item \textbf{Computational cost.} CPARMS-WMF is slower than both WMF baselines, especially on the larger datasets, because the additional signal increases the work required for ALS updates.
 
@@ -923,9 +923,9 @@ This study has three main limitations.
 
 We examined whether interaction data alone can improve personalized recommendation under sparse implicit feedback. The proposed \textbf{CPARMS-WMF} framework clusters users and items from positive feedback, mines single-antecedent association rules over item, user-cluster, and liked-item-cluster tokens, and incorporates the resulting signal through an additional ALS-optimized term.
 
-Under a global temporal split, CPARMS-WMF beats MostPop, Standard-WMF, and CoFactor-WMF in $73$ of the $75$ dataset--seed comparisons. It improves NDCG@10 over Standard-WMF on all five Amazon datasets ($+6.4\%$ to $+58.4\%$), wins $24/25$ runs against each WMF baseline and $25/25$ against MostPop, and has the best overall mean on all five datasets.
+Under a global temporal split, CPARMS-WMF beats MostPop, Standard-WMF, and CoFactor in $73$ of the $75$ dataset--seed comparisons. It improves NDCG@10 over Standard-WMF on all five Amazon datasets ($+6.4\%$ to $+58.4\%$), wins $24/25$ runs against each WMF baseline and $25/25$ against MostPop, and has the best overall mean on all five datasets.
 
-For users with exactly one positive interaction, CPARMS-WMF beats Standard-WMF in $21/25$ seed runs and CoFactor-WMF in $19/25$. The gains are not consistent across datasets: Luxury Beauty is the clearest exception, with both WMF baselines having higher one-interaction means. The results do not show consistent wins over popularity; CPARMS-WMF wins only $13/25$ one-interaction runs against MostPop.
+For users with exactly one positive interaction, CPARMS-WMF beats Standard-WMF in $21/25$ seed runs and CoFactor in $19/25$. The gains are not consistent across datasets: Luxury Beauty is the clearest exception, with both WMF baselines having higher one-interaction means. The results do not show consistent wins over popularity; CPARMS-WMF wins only $13/25$ one-interaction runs against MostPop.
 
 Future work could extend CPARMS beyond pairwise rules with single antecedents. The current design keeps rule mining efficient and interpretable, but higher-order antecedents may capture combinations of liked items or item clusters that cannot be expressed by a single token. Comparative experiments with Apriori or FP-Growth should therefore evaluate whether these richer patterns improve ranking accuracy enough to justify their additional mining cost~\cite{mythili2013performance}. Another priority is a fair evaluation protocol for users with no positive fit-window history.
 

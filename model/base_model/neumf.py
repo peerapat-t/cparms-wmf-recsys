@@ -1,4 +1,4 @@
-"""Vanilla Neural Matrix Factorization (NeuMF) implicit-feedback baseline."""
+"""Train a neural matrix-factorization recommender for implicit feedback."""
 
 from numbers import Integral
 
@@ -12,12 +12,14 @@ from util.seed_config import resolve_seed
 
 
 def validate_positive_int(name: str, value) -> int:
+    """Validate and return a positive integer hyperparameter."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value <= 0:
         raise ValueError(f"{name} must be a positive integer")
     return int(value)
 
 
 def prepare_feedback(Y, shape) -> tuple[sparse.csr_matrix, sparse.csr_matrix]:
+    """Validate feedback and return positive and observed interactions."""
     liked = to_L(Y)
     seen = to_B(Y)
     if liked.shape != shape or seen.shape != shape:
@@ -29,7 +31,7 @@ def trainable_positive_pairs(
     liked: sparse.csr_matrix,
     negative_exclusions: sparse.csr_matrix,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Return positive pairs for users with an item outside the exclusion set."""
+    """Extract positives for users whose negative complement is nonempty."""
     positive = liked.tocoo()
     if negative_exclusions.shape != liked.shape:
         raise ValueError("negative_exclusions must have the same shape as liked")
@@ -45,6 +47,7 @@ def trainable_positive_pairs(
 
 
 def build_row_item_sets(matrix: sparse.csr_matrix) -> tuple[frozenset[int], ...]:
+    """Return each CSR row's item indices as a membership set."""
     return tuple(
         frozenset(
             matrix.indices[
@@ -61,7 +64,7 @@ def sample_complement_items(
     item_count: int,
     rng: np.random.Generator,
 ) -> np.ndarray:
-    """Sample one item outside each user's positive-item set."""
+    """Sample one nonexcluded item for every supplied user index."""
     negatives = rng.integers(0, item_count, size=user_idx.size, dtype=np.int64)
     invalid = np.fromiter(
         (
@@ -92,6 +95,7 @@ def sample_complement_items(
 
 
 def resolve_torch_device(device: str | None) -> torch.device:
+    """Resolve a PyTorch device and reject unavailable CUDA requests."""
     resolved = torch.device("cpu" if device is None else device)
     if resolved.type == "cuda" and not torch.cuda.is_available():
         raise ValueError("CUDA was requested but is not available.")
@@ -99,12 +103,15 @@ def resolve_torch_device(device: str | None) -> torch.device:
 
 
 def torch_generator(seed: int, offset: int = 0) -> torch.Generator:
+    """Create a deterministic CPU generator from a seed and offset."""
     generator = torch.Generator(device="cpu")
     generator.manual_seed((int(seed) + int(offset)) % (2**63 - 1))
     return generator
 
 
 class _NeuMFNetwork(nn.Module):
+    """Combine generalized MF and multilayer-perceptron representations."""
+
     def __init__(
         self,
         user_count,
@@ -113,6 +120,7 @@ class _NeuMFNetwork(nn.Module):
         hidden_layers,
         random_state,
     ):
+        """Construct embedding, hidden, and prediction layers."""
         super().__init__()
         self.gmf_user = nn.Embedding(user_count, latent)
         self.gmf_item = nn.Embedding(item_count, latent)
@@ -130,6 +138,7 @@ class _NeuMFNetwork(nn.Module):
         self._reset_parameters(random_state)
 
     def _reset_parameters(self, random_state):
+        """Initialize every trainable parameter deterministically."""
         embeddings = (
             self.gmf_user,
             self.gmf_item,
@@ -155,8 +164,8 @@ class _NeuMFNetwork(nn.Module):
                 )
                 nn.init.zeros_(module.bias)
                 linear_idx += 1
-        # Keras' ``lecun_uniform`` samples from
-        # U(-sqrt(3 / fan_in), sqrt(3 / fan_in)).
+
+
         prediction_bound = np.sqrt(3.0 / self.output.in_features)
         nn.init.uniform_(
             self.output.weight,
@@ -167,6 +176,7 @@ class _NeuMFNetwork(nn.Module):
         nn.init.zeros_(self.output.bias)
 
     def forward(self, user_idx, item_idx):
+        """Return logits for batches of aligned user-item pairs."""
         gmf = self.gmf_user(user_idx) * self.gmf_item(item_idx)
         mlp_input = torch.cat(
             [self.mlp_user(user_idx), self.mlp_item(item_idx)],
@@ -177,20 +187,9 @@ class _NeuMFNetwork(nn.Module):
 
 
 class NeuMF:
-    # Inputs:
-    # - user_count: Number of users represented by the model.
-    # - item_count: Number of fit-window candidate items.
-    # - latent: GMF embedding dimension and final predictive-factor width.
-    # - hidden_layers: Canonical MLP tower widths including the concatenated
-    #   embedding input; the first width must be even.
-    # - learning_rate: Adam learning rate.
-    # - reg_mf: Keras-style L2 coefficient for the two GMF embeddings.
-    # - reg_layers: Keras-style L2 coefficients for the MLP embedding and
-    #   successive dense layers. Must align with hidden_layers.
-    # - negative_samples: Non-positive items sampled per positive pair.
-    # - random_state: Seed for initialization, shuffling, and negative sampling.
-    # - device: Torch device string; None selects CPU.
-    # Output: Initialized vanilla NeuMF model.
+    """Expose NeuMF optimization and batched per-user scoring."""
+
+
     def __init__(
         self,
         user_count,
@@ -204,6 +203,7 @@ class NeuMF:
         random_state=None,
         device=None,
     ):
+        """Validate hyperparameters and initialize the neural network."""
         self.user_count = validate_positive_int("user_count", user_count)
         self.item_count = validate_positive_int("item_count", item_count)
         self.latent = validate_positive_int("latent", latent)
@@ -247,15 +247,12 @@ class NeuMF:
 
     @property
     def shape(self) -> tuple[int, int]:
+        """Return the expected user-item matrix shape."""
         return self.user_count, self.item_count
 
-    # Inputs:
-    # - Y: Dense or sparse raw fit-window feedback matrix.
-    # - epochs: Number of full passes over positive pairs.
-    # - batch_size: Positive pairs processed per optimizer step.
-    # - verbose_every: Epoch interval controlling loss reporting.
-    # Output: This fitted NeuMF instance.
+
     def fit(self, Y, epochs=100, batch_size=256, verbose_every=10):
+        """Fit NeuMF on positive pairs and sampled negative examples."""
         epochs = validate_positive_int("epochs", epochs)
         batch_size = validate_positive_int("batch_size", batch_size)
         verbose_every = validate_positive_int("verbose_every", verbose_every)
@@ -281,6 +278,7 @@ class NeuMF:
         )
         self.network.train()
 
+        # Resample negatives each epoch before binary-classification updates.
         for epoch_idx in range(epochs):
             negative_users = np.repeat(
                 positive_users,
@@ -352,11 +350,9 @@ class NeuMF:
                 )
         return self
 
-    # Inputs:
-    # - user_idx: Zero-based user index to score.
-    # - batch_size: Number of candidate items scored per forward pass.
-    # Output: Dense sigmoid probabilities for every candidate item.
+
     def score_user(self, user_idx: int, batch_size=8192) -> np.ndarray:
+        """Score every item for one user in bounded batches."""
         user_idx = int(user_idx)
         batch_size = validate_positive_int("batch_size", batch_size)
         if user_idx < 0 or user_idx >= self.user_count:

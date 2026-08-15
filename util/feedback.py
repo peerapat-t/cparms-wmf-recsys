@@ -1,22 +1,15 @@
-# This file centralizes conversion of raw feedback Y into the canonical
-# Y / B / L matrices used across the pipeline:
-#   Y = raw ratings (values preserved)
-#   B = seen / any interaction   (Y != 0) -> 1
-#   L = liked / positive         (Y >  LIKE_THRESHOLD) -> 1
+"""Validate ratings and derive binary feedback matrices."""
 
 import numpy as np
 from scipy import sparse
 
 
-# Rating strictly greater than this threshold counts as a positive "like" (L).
-LIKE_THRESHOLD = 3.0
+LIKE_THRESHOLD = 4.0
+DISLIKE_THRESHOLD = 4.0
 
 
-# Inputs:
-# - Y: Dense or sparse non-negative user-item interaction matrix.
-# - dtype: Output value dtype.
-# Output: Canonical non-negative CSR matrix with raw interaction values preserved.
-def to_Y(Y, dtype=np.float32) -> sparse.csr_matrix:
+def to_Y(Y, dtype=np.float64) -> sparse.csr_matrix:
+    """Return a validated nonnegative rating matrix in CSR format."""
     if sparse.issparse(Y):
         matrix = Y.tocsr().astype(dtype, copy=True)
     else:
@@ -33,23 +26,16 @@ def to_Y(Y, dtype=np.float32) -> sparse.csr_matrix:
     return matrix
 
 
-# Inputs:
-# - Y: Dense or sparse non-negative user-item interaction matrix.
-# - dtype: Output value dtype.
-# Output: Canonical CSR "seen" matrix B where every interaction (any rating) equals one.
-def to_B(Y, dtype=np.float32) -> sparse.csr_matrix:
+def to_B(Y, dtype=np.float64) -> sparse.csr_matrix:
+    """Convert observed ratings into a binary interaction matrix."""
     B = to_Y(Y)
     if B.nnz:
         B.data = np.ones(B.nnz, dtype=dtype)
     return B
 
 
-# Inputs:
-# - Y: Dense or sparse non-negative user-item interaction matrix.
-# - threshold: Minimum exclusive rating counted as a positive "like".
-# - dtype: Output value dtype.
-# Output: Canonical CSR "liked" matrix L where positive entries (Y > threshold) equal one.
-def to_L(Y, threshold: float = LIKE_THRESHOLD, dtype=np.float32) -> sparse.csr_matrix:
+def to_L(Y, threshold: float = LIKE_THRESHOLD, dtype=np.float64) -> sparse.csr_matrix:
+    """Select ratings strictly above the like threshold."""
     if not np.isfinite(threshold):
         raise ValueError("threshold must be finite.")
     L = to_Y(Y)
@@ -58,3 +44,15 @@ def to_L(Y, threshold: float = LIKE_THRESHOLD, dtype=np.float32) -> sparse.csr_m
         L.eliminate_zeros()
     L.sort_indices()
     return L
+
+
+def to_D(Y, threshold: float = DISLIKE_THRESHOLD, dtype=np.float64) -> sparse.csr_matrix:
+    """Select positive ratings strictly below the dislike threshold."""
+    if not np.isfinite(threshold):
+        raise ValueError("threshold must be finite.")
+    D = to_Y(Y)
+    if D.nnz:
+        D.data = ((D.data > 0.0) & (D.data < float(threshold))).astype(dtype)
+        D.eliminate_zeros()
+    D.sort_indices()
+    return D

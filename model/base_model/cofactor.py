@@ -1,47 +1,100 @@
-# This file implements CoFactor-style WMF regularized by item co-occurrence.
+"""Train the CoFactor recommender on feedback and item co-occurrence."""
 
 from numbers import Integral
 
 import numpy as np
 from scipy import sparse
 
-from model.signal_gen.generator_sppmi import build_item_sppmi_matrix
 from util.feedback import LIKE_THRESHOLD, to_L, to_Y
 from util.seed_config import resolve_seed
 
 
-MODEL_DTYPE = np.float32
+MODEL_DTYPE = np.float64
 
 
-# Inputs:
-# - n_sweeps: Number of full ALS update sweeps.
-# - verbose_every: Interval controlling loss reporting.
-# Output: The validated (n_sweeps, verbose_every) pair as integers.
+def build_item_sppmi_matrix(
+    Y,
+    threshold: float = LIKE_THRESHOLD,
+    negative_samples: float = 1.0,
+) -> sparse.csr_matrix:
+    """Build a symmetric shifted positive-PMI item co-occurrence matrix."""
+    negative_samples = float(negative_samples)
+    if not np.isfinite(negative_samples) or negative_samples < 1.0:
+        raise ValueError("negative_samples must be finite and >= 1.")
+
+
+    L = to_L(Y, threshold=threshold)
+    item_count = L.shape[1]
+    cooccurrence = (L.T @ L).tocsr().astype(
+        MODEL_DTYPE,
+        copy=False,
+    )
+    cooccurrence.setdiag(0)
+    cooccurrence.eliminate_zeros()
+    cooccurrence.sort_indices()
+
+    if cooccurrence.nnz == 0:
+        return sparse.csr_matrix(
+            (item_count, item_count),
+            dtype=MODEL_DTYPE,
+        )
+
+
+    row_count = np.asarray(
+        cooccurrence.sum(axis=1)
+    ).reshape(-1).astype(np.float64, copy=False)
+    pair_count = float(cooccurrence.data.sum())
+    if pair_count <= 0.0:
+        return sparse.csr_matrix(
+            (item_count, item_count),
+            dtype=MODEL_DTYPE,
+        )
+
+    sppmi = cooccurrence.copy().astype(np.float64, copy=False)
+    for item_idx in range(item_count):
+        start = sppmi.indptr[item_idx]
+        stop = sppmi.indptr[item_idx + 1]
+        if start == stop:
+            continue
+        context_idx = sppmi.indices[start:stop]
+        counts = sppmi.data[start:stop]
+        denominator = row_count[item_idx] * row_count[context_idx]
+        valid = denominator > 0.0
+        values = np.zeros(counts.shape, dtype=np.float64)
+        values[valid] = np.log(
+            counts[valid] * pair_count / denominator[valid]
+        )
+        sppmi.data[start:stop] = values
+
+
+    if negative_samples > 1.0:
+        sppmi.data -= np.log(negative_samples)
+    sppmi.data[sppmi.data < 0.0] = 0.0
+    sppmi = sppmi.astype(MODEL_DTYPE, copy=False)
+    sppmi.eliminate_zeros()
+    sppmi.sort_indices()
+    return sppmi
+
+
 def _validate_training_schedule(n_sweeps, verbose_every) -> tuple[int, int]:
+    """Validate and return the ALS reporting schedule."""
     for name, value in (("n_sweeps", n_sweeps), ("verbose_every", verbose_every)):
         if isinstance(value, bool) or not isinstance(value, Integral) or value <= 0:
             raise ValueError(f"{name} must be a positive integer")
     return int(n_sweeps), int(verbose_every)
 
 
-# Inputs:
-# - sweep_idx: Zero-based index of the current sweep.
-# - verbose_every: Positive interval controlling loss reporting.
-# Output: True when this sweep should print its losses.
 def _should_report_sweep(sweep_idx: int, verbose_every: int) -> bool:
+    """Return whether the current sweep should emit diagnostics."""
     return sweep_idx == 0 or (sweep_idx + 1) % verbose_every == 0
 
 
-# Inputs:
-# - row_count: Number of latent-factor rows to create.
-# - latent_dim: Latent factor dimension.
-# - rng: Seeded random generator for reproducible initialization.
-# Output: Small-random-normal latent factor matrix.
 def _initialize_factors(
     row_count: int,
     latent_dim: int,
     rng: np.random.RandomState,
 ) -> np.ndarray:
+    """Draw a deterministic dense latent-factor matrix."""
     return rng.normal(
         0.0,
         0.01,
@@ -49,19 +102,14 @@ def _initialize_factors(
     ).astype(MODEL_DTYPE)
 
 
-# Inputs:
-# - positive_feedback: Binary CSR positive preferences for the rows being updated.
-# - fixed_factors: Opposite-side latent factors held fixed.
-# - lambda_rate: L2 regularization coefficient.
-# - alpha: Extra confidence assigned to positive L entries.
-# Output: Updated latent factor matrix for all rows.
 def _wmf_factor_update(
     positive_feedback: sparse.csr_matrix,
     fixed_factors: np.ndarray,
     lambda_rate: float,
     alpha: float,
 ) -> np.ndarray:
-    # Step 1: Build the shared unobserved-feedback and regularization matrix.
+    """Solve one implicit-feedback ALS update for every matrix row."""
+
     row_count = positive_feedback.shape[0]
     latent_dim = fixed_factors.shape[1]
     identity = np.eye(latent_dim, dtype=MODEL_DTYPE)
@@ -71,7 +119,7 @@ def _wmf_factor_update(
     )
     updated = np.zeros((row_count, latent_dim), dtype=MODEL_DTYPE)
 
-    # Step 2: Construct and solve one weighted normal equation per row.
+
     for row_idx in range(row_count):
         start = positive_feedback.indptr[row_idx]
         stop = positive_feedback.indptr[row_idx + 1]
@@ -80,7 +128,7 @@ def _wmf_factor_update(
         system_matrix = base.copy()
         right_hand_side = np.zeros(latent_dim, dtype=MODEL_DTYPE)
         if positive_idx.size:
-            # Step 2.1: Add confidence contributions from positive preferences.
+
             positive_factors = fixed_factors[positive_idx]
             system_matrix += MODEL_DTYPE(alpha) * (
                 positive_factors.T @ positive_factors
@@ -89,7 +137,7 @@ def _wmf_factor_update(
                 positive_factors.sum(axis=0)
             )
 
-        # Step 2.2: Solve the row-specific linear system.
+
         updated[row_idx] = np.linalg.solve(
             system_matrix,
             right_hand_side,
@@ -97,52 +145,38 @@ def _wmf_factor_update(
     return updated
 
 
-# Inputs:
-# - user_factors: Current user latent-factor matrix.
-# - item_factors: Current item latent-factor matrix.
-# - positive_feedback: Binary CSR user-item positive preferences.
-# - alpha: Extra confidence assigned to positive L entries.
-# Output: Confidence-weighted squared WMF loss over all user-item pairs.
 def _wmf_loss(
     user_factors: np.ndarray,
     item_factors: np.ndarray,
     positive_feedback: sparse.csr_matrix,
     alpha: float,
 ) -> float:
-    # Step 1: Score every unobserved pair at once through the factor Gram matrices.
-    user_gram = user_factors.T @ user_factors
-    item_gram = item_factors.T @ item_factors
+    """Compute the unregularized weighted reconstruction loss."""
+    user_factors_64 = np.asarray(user_factors, dtype=np.float64)
+    item_factors_64 = np.asarray(item_factors, dtype=np.float64)
+
+
+    user_gram = user_factors_64.T @ user_factors_64
+    item_gram = item_factors_64.T @ item_factors_64
     loss = float(np.sum(user_gram * item_gram))
 
-    # Step 2: Correct each observed pair to its higher confidence weight.
+
     for user_idx in range(positive_feedback.shape[0]):
         start = positive_feedback.indptr[user_idx]
         stop = positive_feedback.indptr[user_idx + 1]
         item_idx = positive_feedback.indices[start:stop]
         if item_idx.size == 0:
             continue
-        scores = item_factors[item_idx] @ user_factors[user_idx]
+        scores = item_factors_64[item_idx] @ user_factors_64[user_idx]
         loss += float(
             np.sum(
                 (1.0 + alpha) * (1.0 - scores) ** 2
                 - scores**2
             )
         )
-    return loss
+    return max(loss, 0.0)
 
 
-# Inputs:
-# - L_T: Binary CSR item-user positive preferences.
-# - user_factors: Current user latent factors.
-# - context_factors: Current item-context latent factors.
-# - item_biases: Current item-side co-occurrence biases.
-# - context_biases: Current context-side co-occurrence biases.
-# - global_bias: Current global co-occurrence bias.
-# - cooccurrence: CSR item-item SPPMI target matrix.
-# - lambda_rate: Item-factor L2 regularization coefficient.
-# - alpha: Extra confidence assigned to positive L entries.
-# - gamma: Weight assigned to the co-occurrence term.
-# Output: Updated item factor matrix.
 def _item_factor_update(
     L_T: sparse.csr_matrix,
     user_factors: np.ndarray,
@@ -155,7 +189,8 @@ def _item_factor_update(
     alpha: float,
     gamma: float,
 ) -> np.ndarray:
-    # Step 1: Build the shared WMF part of the normal equation.
+    """Update item factors from feedback and co-occurrence objectives."""
+
     item_count = L_T.shape[0]
     latent_dim = user_factors.shape[1]
     identity = np.eye(latent_dim, dtype=MODEL_DTYPE)
@@ -168,7 +203,7 @@ def _item_factor_update(
     cofactor_weight = MODEL_DTYPE(gamma)
     updated = np.zeros((item_count, latent_dim), dtype=MODEL_DTYPE)
 
-    # Step 2: Solve one combined WMF/co-occurrence system per item.
+
     for item_idx in range(item_count):
         start = L_T.indptr[item_idx]
         stop = L_T.indptr[item_idx + 1]
@@ -177,6 +212,7 @@ def _item_factor_update(
         right_hand_side = np.zeros(latent_dim, dtype=MODEL_DTYPE)
 
         if user_idx.size:
+
             positive_factors = user_factors[user_idx]
             system_matrix += confidence_delta * (
                 positive_factors.T @ positive_factors
@@ -184,6 +220,7 @@ def _item_factor_update(
             right_hand_side += observed_confidence * positive_factors.sum(axis=0)
 
         if gamma > 0.0:
+
             start = cooccurrence.indptr[item_idx]
             stop = cooccurrence.indptr[item_idx + 1]
             context_idx = cooccurrence.indices[start:stop]
@@ -198,6 +235,7 @@ def _item_factor_update(
                 system_matrix += cofactor_weight * (context.T @ context)
                 right_hand_side += cofactor_weight * (targets @ context)
 
+
         updated[item_idx] = np.linalg.solve(
             system_matrix,
             right_hand_side,
@@ -205,15 +243,6 @@ def _item_factor_update(
     return updated
 
 
-# Inputs:
-# - item_factors: Current item latent factors.
-# - item_biases: Current item-side co-occurrence biases.
-# - context_biases: Current context-side co-occurrence biases.
-# - global_bias: Current global co-occurrence bias.
-# - cooccurrence_t: CSR transposed SPPMI target matrix.
-# - lambda_context_rate: Context-factor L2 regularization coefficient.
-# - gamma: Weight assigned to the co-occurrence term.
-# Output: Updated context factor matrix.
 def _context_factor_update(
     item_factors: np.ndarray,
     item_biases: np.ndarray,
@@ -223,13 +252,15 @@ def _context_factor_update(
     lambda_context_rate: float,
     gamma: float,
 ) -> np.ndarray:
+    """Update context factors for the co-occurrence objective."""
+
     item_count, latent_dim = item_factors.shape
     identity = np.eye(latent_dim, dtype=MODEL_DTYPE)
     regularization = MODEL_DTYPE(lambda_context_rate) * identity
     cofactor_weight = MODEL_DTYPE(gamma)
     updated = np.zeros((item_count, latent_dim), dtype=MODEL_DTYPE)
 
-    # Step 1: Solve one weighted co-occurrence system per context item.
+
     for context_idx in range(item_count):
         start = cooccurrence_t.indptr[context_idx]
         stop = cooccurrence_t.indptr[context_idx + 1]
@@ -256,13 +287,6 @@ def _context_factor_update(
     return updated
 
 
-# Inputs:
-# - item_factors: Current item latent factors.
-# - context_factors: Current context latent factors.
-# - cooccurrence: CSR SPPMI target matrix.
-# - context_biases: Current context-side co-occurrence biases.
-# - global_bias: Current global co-occurrence bias.
-# Output: Updated unregularized item-side co-occurrence biases.
 def _item_bias_update(
     item_factors: np.ndarray,
     context_factors: np.ndarray,
@@ -270,6 +294,7 @@ def _item_bias_update(
     context_biases: np.ndarray,
     global_bias: float,
 ) -> np.ndarray:
+    """Update per-item biases for observed co-occurrences."""
     item_count = cooccurrence.shape[0]
     biases = np.zeros(item_count, dtype=MODEL_DTYPE)
     if cooccurrence.nnz == 0:
@@ -294,13 +319,6 @@ def _item_bias_update(
     return biases
 
 
-# Inputs:
-# - item_factors: Current item latent factors.
-# - context_factors: Current context latent factors.
-# - cooccurrence_t: CSR transposed SPPMI target matrix.
-# - item_biases: Current item-side co-occurrence biases.
-# - global_bias: Current global co-occurrence bias.
-# Output: Updated unregularized context-side co-occurrence biases.
 def _context_bias_update(
     item_factors: np.ndarray,
     context_factors: np.ndarray,
@@ -308,6 +326,7 @@ def _context_bias_update(
     item_biases: np.ndarray,
     global_bias: float,
 ) -> np.ndarray:
+    """Update per-context biases for observed co-occurrences."""
     context_count = cooccurrence_t.shape[0]
     biases = np.zeros(context_count, dtype=MODEL_DTYPE)
     if cooccurrence_t.nnz == 0:
@@ -333,8 +352,8 @@ def _global_bias_update(
     item_biases: np.ndarray,
     context_biases: np.ndarray,
     cooccurrence: sparse.csr_matrix,
-) -> np.float32:
-    """Update the unregularized global bias from all SPPMI residuals."""
+) -> np.float64:
+    """Update the global co-occurrence intercept."""
     if cooccurrence.nnz == 0:
         return MODEL_DTYPE(0.0)
     residual_sum = 0.0
@@ -354,15 +373,6 @@ def _global_bias_update(
     return MODEL_DTYPE(residual_sum / cooccurrence.nnz)
 
 
-# Inputs:
-# - item_factors: Current item latent factors.
-# - context_factors: Current context latent factors.
-# - item_biases: Current item-side co-occurrence biases.
-# - context_biases: Current context-side co-occurrence biases.
-# - global_bias: Current global co-occurrence bias.
-# - cooccurrence: CSR SPPMI matrix.
-# - gamma: Weight assigned to the co-occurrence term.
-# Output: Gamma-weighted item co-occurrence loss.
 def _cooccurrence_loss(
     item_factors: np.ndarray,
     context_factors: np.ndarray,
@@ -372,6 +382,7 @@ def _cooccurrence_loss(
     cooccurrence: sparse.csr_matrix,
     gamma: float,
 ) -> float:
+    """Compute squared error on observed item-context values."""
     if gamma <= 0.0 or cooccurrence.nnz == 0:
         return 0.0
 
@@ -394,20 +405,10 @@ def _cooccurrence_loss(
     return float(gamma) * loss
 
 
-class WMF_Cofactor:
-    # Inputs:
-    # - user_count: Number of users represented by the model.
-    # - item_count: Number of items represented by the model.
-    # - K: Latent factor dimension.
-    # - lambda_rate: L2 regularization coefficient for user and item factors.
-    # - alpha: Extra confidence assigned to positive L entries.
-    # - gamma: Item co-occurrence weight, equal to 1 / relative WMF scale.
-    # - lambda_context_rate: Optional context L2 penalty. Defaults to
-    #   gamma * lambda_rate.
-    # - negative_samples: Shift k for SPPMI = max(PMI - log(k), 0).
-    # - threshold: Minimum exclusive rating interpreted as positive feedback.
-    # - random_state: Optional seed for factor initialization.
-    # Output: Initialized CoFactor-regularized WMF model.
+class CoFactor:
+    """Jointly factorize implicit feedback and shifted-PMI co-occurrence."""
+
+
     def __init__(
         self,
         user_count,
@@ -421,6 +422,7 @@ class WMF_Cofactor:
         threshold: float = LIKE_THRESHOLD,
         random_state=None,
     ):
+        """Validate hyperparameters and initialize model state."""
         self.user_count = int(user_count)
         self.item_count = int(item_count)
         self.K = int(K)
@@ -440,7 +442,7 @@ class WMF_Cofactor:
         self.threshold = float(threshold)
         self.random_state = resolve_seed(random_state)
 
-        # Step 1: Validate model hyperparameters.
+
         if self.K <= 0:
             raise ValueError("K must be > 0.")
         if not np.isfinite(self.lambda_rate) or self.lambda_rate <= 0.0:
@@ -456,8 +458,8 @@ class WMF_Cofactor:
             raise ValueError("gamma must be finite and >= 0.")
         if not np.isfinite(self.negative_samples) or self.negative_samples < 1.0:
             raise ValueError("negative_samples must be finite and >= 1.")
-        # Step 2: Use independent deterministic streams so padding extra users
-        # cannot change the initial item or context factors.
+
+
         user_rng = np.random.RandomState(self.random_state)
         item_rng = np.random.RandomState((self.random_state + 104729) % (2**32))
         context_rng = np.random.RandomState(
@@ -482,18 +484,13 @@ class WMF_Cofactor:
         self.context_biases = np.zeros(self.item_count, dtype=MODEL_DTYPE)
         self.global_bias = MODEL_DTYPE(0.0)
 
-    # Inputs: None; reads model dimensions from this instance.
-    # Output: A (user_count, item_count) tuple.
+
     @property
     def shape(self) -> tuple[int, int]:
+        """Return the expected user-item matrix shape."""
         return self.user_count, self.item_count
 
-    # Inputs:
-    # - Y: Dense or sparse user-item interaction matrix.
-    # - M: Optional item-item SPPMI/co-occurrence matrix. If omitted, built from Y.
-    # - n_sweeps: Number of full ALS update sweeps.
-    # - verbose_every: Positive interval controlling loss reporting.
-    # Output: This fitted WMF_Cofactor instance.
+
     def fit(
         self,
         Y,
@@ -501,16 +498,16 @@ class WMF_Cofactor:
         n_sweeps: int = 10,
         verbose_every: int = 5,
     ):
+        """Fit feedback and context factors with alternating updates."""
         n_sweeps, verbose_every = _validate_training_schedule(
             n_sweeps, verbose_every
         )
-        # Step 1: Validate interactions and prepare the user-item WMF target.
         L = to_L(Y, threshold=self.threshold)
         if L.shape != self.shape:
             raise ValueError(f"Y must be shape {self.shape}.")
         L_T = L.T.tocsr()
 
-        # Step 2: Build or validate the item-item co-occurrence target.
+
         if self.gamma == 0.0:
             cooccurrence = sparse.csr_matrix(
                 (self.item_count, self.item_count),
@@ -531,28 +528,26 @@ class WMF_Cofactor:
         cooccurrence.eliminate_zeros()
         cooccurrence.sort_indices()
         cooccurrence_t = cooccurrence.T.tocsr()
-        # Without a usable co-occurrence target the model degenerates to plain WMF,
-        # so the context factors and biases stay frozen at zero and contribute
-        # nothing to the item update.
         has_cofactor = (
             self.gamma > 0.0
             and cooccurrence.nnz > 0
         )
         if not has_cofactor:
+
+
             self.item_biases.fill(0.0)
             self.context_biases.fill(0.0)
             self.global_bias = MODEL_DTYPE(0.0)
 
-        # Step 3: Alternate user, item, and context updates.
+
+        # Alternate feedback, co-occurrence factor, and bias updates.
         for sweep_idx in range(n_sweeps):
-            # Step 3.1: Update all user factors while holding item factors fixed.
             self.P = _wmf_factor_update(
                 L,
                 self.Q,
                 self.lambda_rate,
                 self.alpha,
             )
-            # Step 3.2: Update item factors from both interactions and co-occurrence.
             self.Q = _item_factor_update(
                 L_T,
                 self.P,
@@ -567,7 +562,7 @@ class WMF_Cofactor:
             )
 
             if has_cofactor:
-                # Step 3.3: Refit the context factors and biases to the SPPMI targets.
+
                 self.Z = _context_factor_update(
                     self.Q,
                     self.item_biases,
@@ -600,7 +595,7 @@ class WMF_Cofactor:
                 )
 
             if _should_report_sweep(sweep_idx, verbose_every):
-                # Step 3.4: Calculate WMF, CoFactor, and regularization losses.
+
                 wmf_loss = _wmf_loss(
                     self.P,
                     self.Q,
@@ -641,10 +636,9 @@ class WMF_Cofactor:
                 )
         return self
 
-    # Inputs:
-    # - user_idx: Zero-based user index to score.
-    # Output: Dense item-score vector from the user's factors and all item factors.
+
     def score_user(self, user_idx: int) -> np.ndarray:
+        """Score every item for one user."""
         user_idx = int(user_idx)
         if user_idx < 0 or user_idx >= self.user_count:
             raise IndexError("user_idx is out of range.")

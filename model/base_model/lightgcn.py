@@ -1,4 +1,4 @@
-"""Vanilla LightGCN recommender trained with pairwise BPR loss."""
+"""Train a LightGCN recommender with pairwise ranking loss."""
 
 from numbers import Integral
 
@@ -14,12 +14,14 @@ from util.seed_config import resolve_seed
 
 
 def validate_positive_int(name: str, value) -> int:
+    """Validate and return a positive integer hyperparameter."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value <= 0:
         raise ValueError(f"{name} must be a positive integer")
     return int(value)
 
 
 def prepare_feedback(Y, shape) -> tuple[sparse.csr_matrix, sparse.csr_matrix]:
+    """Validate feedback and return positive and observed interactions."""
     liked = to_L(Y)
     seen = to_B(Y)
     if liked.shape != shape or seen.shape != shape:
@@ -28,6 +30,7 @@ def prepare_feedback(Y, shape) -> tuple[sparse.csr_matrix, sparse.csr_matrix]:
 
 
 def build_row_item_sets(matrix: sparse.csr_matrix) -> tuple[frozenset[int], ...]:
+    """Return each CSR row's item indices as a membership set."""
     return tuple(
         frozenset(
             matrix.indices[
@@ -44,7 +47,7 @@ def sample_complement_items(
     item_count: int,
     rng: np.random.Generator,
 ) -> np.ndarray:
-    """Sample one item outside each user's positive-item set."""
+    """Sample one nonexcluded item for every supplied user index."""
     negatives = rng.integers(0, item_count, size=user_idx.size, dtype=np.int64)
     invalid = np.fromiter(
         (
@@ -78,13 +81,7 @@ def sample_uniform_user_triples(
     liked: sparse.csr_matrix,
     rng: np.random.Generator,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Reproduce LightGCN's Python fallback BPR sampler for one epoch.
-
-    The upstream repository first tries an optional C++ extension and otherwise
-    uses this Python path. The Python path draws ``liked.nnz`` users uniformly,
-    skips users without a train positive, then draws one positive and one
-    non-positive item for every retained user.
-    """
+    """Sample user-positive-negative triples with users drawn uniformly."""
     user_count, item_count = liked.shape
     row_counts = np.diff(liked.indptr)
     sampled_users = rng.integers(
@@ -114,6 +111,7 @@ def sample_uniform_user_triples(
 
 
 def resolve_torch_device(device: str | None) -> torch.device:
+    """Resolve a PyTorch device and reject unavailable CUDA requests."""
     resolved = torch.device("cpu" if device is None else device)
     if resolved.type == "cuda" and not torch.cuda.is_available():
         raise ValueError("CUDA was requested but is not available.")
@@ -121,19 +119,17 @@ def resolve_torch_device(device: str | None) -> torch.device:
 
 
 def torch_generator(seed: int, offset: int = 0) -> torch.Generator:
+    """Create a deterministic CPU generator from a seed and offset."""
     generator = torch.Generator(device="cpu")
     generator.manual_seed((int(seed) + int(offset)) % (2**63 - 1))
     return generator
 
 
-# Inputs:
-# - liked: Binary positive user-item interaction matrix.
-# - device: Torch device that stores the sparse normalized graph.
-# Output: Symmetric D^-1/2 A D^-1/2 sparse adjacency over user and item nodes.
 def _build_normalized_adjacency(
     liked: sparse.csr_matrix,
     device: torch.device,
 ) -> torch.Tensor:
+    """Build the symmetric degree-normalized user-item graph."""
     positive = liked.tocoo()
     user_count, item_count = liked.shape
     node_count = user_count + item_count
@@ -162,14 +158,11 @@ def _build_normalized_adjacency(
 
 
 class _LightGCNNetwork(nn.Module):
-    # Inputs:
-    # - user_count: Number of user-node embeddings.
-    # - item_count: Number of item-node embeddings.
-    # - latent: Embedding dimension.
-    # - n_layers: Number of graph propagation layers.
-    # - random_state: Initialization seed.
-    # Output: Initialized LightGCN embedding network.
+    """Hold trainable node embeddings and propagate them over the graph."""
+
+
     def __init__(self, user_count, item_count, latent, n_layers, random_state):
+        """Initialize user and item embeddings deterministically."""
         super().__init__()
         self.user_count = int(user_count)
         self.n_layers = int(n_layers)
@@ -188,10 +181,9 @@ class _LightGCNNetwork(nn.Module):
             generator=torch_generator(random_state, 104729),
         )
 
-    # Inputs:
-    # - adjacency: Normalized sparse adjacency over all user and item nodes.
-    # Output: Layer-mean user and item embeddings used for ranking.
+
     def propagate(self, adjacency: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Average initial and propagated embeddings across graph layers."""
         embeddings = torch.cat(
             [self.user_embedding.weight, self.item_embedding.weight],
             dim=0,
@@ -204,12 +196,6 @@ class _LightGCNNetwork(nn.Module):
         return combined[: self.user_count], combined[self.user_count :]
 
 
-# Inputs:
-# - network: LightGCN embedding network containing the trainable ego factors.
-# - adjacency: Symmetric normalized user-item graph.
-# - users/positives/negatives: One sampled training triple per row.
-# - lambda_rate: Upstream ``decay`` coefficient for ego-embedding L2.
-# Output: The upstream mean pairwise ranking loss and half-scaled L2 penalty.
 def _bpr_batch_objective(
     network: _LightGCNNetwork,
     adjacency: torch.Tensor,
@@ -218,6 +204,7 @@ def _bpr_batch_objective(
     negatives: torch.Tensor,
     lambda_rate: float,
 ) -> tuple[torch.Tensor, torch.Tensor]:
+    """Compute pairwise ranking and embedding regularization losses."""
     user_factors, item_factors = network.propagate(adjacency)
     sampled_users = user_factors[users]
     positive_scores = torch.sum(
@@ -228,13 +215,13 @@ def _bpr_batch_objective(
         sampled_users * item_factors[negatives],
         dim=1,
     )
-    # -log(sigmoid(pos-neg)) is algebraically identical to the upstream
-    # softplus(neg-pos) expression.
+
+
     ranking_loss = -functional.logsigmoid(
         positive_scores - negative_scores
     ).mean()
-    # The reference regularizes only sampled layer-0 (ego) embeddings and
-    # divides their summed squared norms by twice the batch size.
+
+
     regularization = float(lambda_rate) * (
         network.user_embedding(users).square().sum(dim=1)
         + network.item_embedding(positives).square().sum(dim=1)
@@ -244,17 +231,9 @@ def _bpr_batch_objective(
 
 
 class LightGCN:
-    # Inputs:
-    # - user_count: Number of users represented by the model.
-    # - item_count: Number of fit-window candidate items.
-    # - latent: Initial node-embedding dimension.
-    # - n_layers: Number of parameter-free graph propagation layers.
-    # - learning_rate: Adam learning rate.
-    # - lambda_rate: L2 coefficient on sampled initial embeddings.
-    # - negative_samples: Non-positive items sampled per positive pair.
-    # - random_state: Seed for initialization, shuffling, and negative sampling.
-    # - device: Torch device string; None selects CPU.
-    # Output: Initialized vanilla LightGCN model.
+    """Expose LightGCN training and per-user scoring for sparse feedback."""
+
+
     def __init__(
         self,
         user_count,
@@ -267,6 +246,7 @@ class LightGCN:
         random_state=None,
         device=None,
     ):
+        """Validate hyperparameters and initialize the graph network."""
         self.user_count = validate_positive_int("user_count", user_count)
         self.item_count = validate_positive_int("item_count", item_count)
         self.latent = validate_positive_int("latent", latent)
@@ -301,15 +281,15 @@ class LightGCN:
             dtype=np.float32,
         )
 
-    # Inputs: None; reads model dimensions from this instance.
-    # Output: A (user_count, item_count) tuple.
+
     @property
     def shape(self) -> tuple[int, int]:
+        """Return the expected user-item matrix shape."""
         return self.user_count, self.item_count
 
-    # Inputs: None; propagates the fitted graph and reads learned embeddings.
-    # Output: None; refreshes cached CPU factors used during ranking.
+
     def _refresh_factor_cache(self) -> None:
+        """Cache fully propagated factors as NumPy arrays for scoring."""
         self.network.eval()
         with torch.no_grad():
             user_factors, item_factors = self.network.propagate(self.adjacency)
@@ -322,13 +302,9 @@ class LightGCN:
             copy=True,
         )
 
-    # Inputs:
-    # - Y: Dense or sparse raw fit-window feedback matrix.
-    # - epochs: Number of full passes over positive pairs.
-    # - batch_size: Positive pairs processed per optimizer step.
-    # - verbose_every: Epoch interval controlling loss reporting.
-    # Output: This fitted LightGCN instance.
+
     def fit(self, Y, epochs=1000, batch_size=2048, verbose_every=10):
+        """Fit graph embeddings with mini-batch BPR optimization."""
         epochs = validate_positive_int("epochs", epochs)
         batch_size = validate_positive_int("batch_size", batch_size)
         verbose_every = validate_positive_int("verbose_every", verbose_every)
@@ -345,6 +321,7 @@ class LightGCN:
         )
         self.network.train()
 
+        # Resample training triples each epoch before mini-batch updates.
         for epoch_idx in range(epochs):
             users, positives, negatives = sample_uniform_user_triples(
                 liked,
@@ -398,10 +375,9 @@ class LightGCN:
         self._refresh_factor_cache()
         return self
 
-    # Inputs:
-    # - user_idx: Zero-based user index to score.
-    # Output: Dense propagated-factor scores for every candidate item.
+
     def score_user(self, user_idx: int) -> np.ndarray:
+        """Return sigmoid-transformed item scores for one user."""
         user_idx = int(user_idx)
         if user_idx < 0 or user_idx >= self.user_count:
             raise IndexError("user_idx is out of range.")

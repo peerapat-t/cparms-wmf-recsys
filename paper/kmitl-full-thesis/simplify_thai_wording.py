@@ -1,10 +1,4 @@
-"""Create easier-to-read copies of the current Thai thesis chapters.
-
-The replacements are deliberately narrow. They simplify unusual Thai wording
-without changing RecSys/ML terminology, model names, metrics, or equations.
-The script edits Word XML text nodes directly so paragraph/run formatting and
-equation objects are preserved.
-"""
+"""Create simplified-language copies of the Thai thesis documents."""
 
 from __future__ import annotations
 
@@ -29,8 +23,8 @@ SOURCE_FILES = (
     "full_text_thai_cparms_chapter_appendix_updated.docx",
 )
 
+
 REPLACEMENTS = (
-    # Literal or uncommon translations
     ("ข้อมูลอภิพันธุ์ (Metadata)", "ข้อมูลประกอบ (Metadata)"),
     ("การเปิดตัวเย็น", "ปัญหาผู้ใช้ใหม่"),
     ("กลุ่มว่างที่เสื่อมสภาพ", "กลุ่มที่ไม่มีข้อมูลและใช้งานไม่ได้"),
@@ -74,7 +68,6 @@ REPLACEMENTS = (
         "ช่องว่างสัมบูรณ์เหนือแบบจำลองฐานที่แข็งแกร่งที่สุด",
         "ผลต่างของคะแนนเมื่อเทียบกับแบบจำลองฐานที่ดีที่สุด",
     ),
-    # Academic wording that can be stated more directly
     ("ในทำนองเดียวกัน", "เช่นเดียวกัน"),
     ("โดยสรุปภาพรวม", "โดยสรุป"),
     ("กำกับไว้", "ระบุไว้"),
@@ -82,11 +75,11 @@ REPLACEMENTS = (
     ("สภาวะ", "ภาวะ"),
     ("อาทิ", "เช่น"),
     ("ผนวก", "รวม"),
-    # The preferred wording is already used elsewhere.
     ("การบูรณะ", "การสร้างใหม่"),
     ("ให้บูรณะ", "ให้สร้างใหม่"),
     ("บูรณะ", "สร้างใหม่"),
 )
+
 
 PROTECTED_TERMS = (
     "Recommender Systems",
@@ -104,7 +97,7 @@ PROTECTED_TERMS = (
     "Lift",
     "K-means",
     "Standard-WMF",
-    "CoFactor-WMF",
+    "CoFactor",
     "CPARMS-WMF",
 )
 
@@ -112,10 +105,11 @@ W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 W_TEXT = f"{{{W_NS}}}t"
 W_PARAGRAPH = f"{{{W_NS}}}p"
-IGNORED_CHARS = frozenset("\u200b\u200c\u200d\ufeff")
+IGNORED_CHARS = frozenset("​‌‍﻿")
 
 
 def normalized_with_mapping(texts: list[str]) -> tuple[str, list[int], str]:
+    """Normalize visible text while retaining offsets into the source text."""
     full_text = "".join(texts)
     normalized_chars: list[str] = []
     normalized_to_full: list[int] = []
@@ -127,6 +121,7 @@ def normalized_with_mapping(texts: list[str]) -> tuple[str, list[int], str]:
 
 
 def set_node_text(node: ET._Element, text: str) -> None:
+    """Set an XML text node while preserving significant edge spaces."""
     node.text = text
     space_attribute = f"{{{XML_NS}}}space"
     if text[:1].isspace() or text[-1:].isspace():
@@ -141,11 +136,14 @@ def replace_span(
     end: int,
     replacement: str,
 ) -> None:
+    """Replace a character span distributed across multiple XML nodes."""
+
     offsets: list[int] = []
     running = 0
     for node in nodes:
         offsets.append(running)
         running += len(node.text or "")
+
 
     start_node = next(
         index
@@ -163,11 +161,13 @@ def replace_span(
     first_text = nodes[start_node].text or ""
 
     if start_node == end_node:
+
         set_node_text(
             nodes[start_node],
             first_text[:start_local] + replacement + first_text[end_local:],
         )
         return
+
 
     last_text = nodes[end_node].text or ""
     set_node_text(nodes[start_node], first_text[:start_local] + replacement)
@@ -181,8 +181,10 @@ def replace_in_paragraph(
     old: str,
     new: str,
 ) -> int:
+    """Replace every matching phrase within one Word paragraph."""
     count = 0
     while True:
+
         nodes = list(paragraph.iter(W_TEXT))
         if not nodes:
             return count
@@ -199,7 +201,7 @@ def replace_in_paragraph(
         if not starts:
             return count
 
-        # Work backwards so earlier offsets remain valid.
+
         for normalized_start in reversed(starts):
             full_start = mapping[normalized_start]
             full_end = mapping[normalized_start + len(old) - 1] + 1
@@ -208,6 +210,7 @@ def replace_in_paragraph(
 
 
 def visible_text(xml_bytes: bytes) -> str:
+    """Extract visible WordprocessingML text from serialized XML."""
     root = ET.fromstring(xml_bytes)
     texts = [node.text or "" for node in root.iter(W_TEXT)]
     normalized, _, _ = normalized_with_mapping(texts)
@@ -215,6 +218,7 @@ def visible_text(xml_bytes: bytes) -> str:
 
 
 def simplify_document_xml(xml_bytes: bytes) -> tuple[bytes, Counter[str]]:
+    """Rewrite configured phrases in a Word document XML part."""
     root = ET.fromstring(xml_bytes)
     counts: Counter[str] = Counter()
     for old, new in REPLACEMENTS:
@@ -234,12 +238,15 @@ def simplify_document_xml(xml_bytes: bytes) -> tuple[bytes, Counter[str]]:
 
 
 def target_path(source: Path) -> Path:
+    """Derive the output path for a simplified document copy."""
     stem = source.stem
     return source.with_name(f"{stem}_simplified.docx")
 
 
 def build_simplified_copy(source: Path, target: Path) -> Counter[str]:
+    """Rewrite relevant XML parts and create a simplified DOCX copy."""
     with zipfile.ZipFile(source, "r") as archive:
+
         source_xml = archive.read("word/document.xml")
         new_xml, counts = simplify_document_xml(source_xml)
         before_text = visible_text(source_xml)
@@ -253,6 +260,7 @@ def build_simplified_copy(source: Path, target: Path) -> Counter[str]:
                     f"Protected term changed in {source.name}: {term!r} "
                     f"({before_count} -> {after_count})"
                 )
+
 
         with tempfile.NamedTemporaryFile(
             dir=target.parent,
@@ -282,6 +290,7 @@ def build_simplified_copy(source: Path, target: Path) -> Counter[str]:
 
 
 def scan_counts(source: Path) -> Counter[str]:
+    """Count configured source phrases in a DOCX archive."""
     with zipfile.ZipFile(source, "r") as archive:
         xml_bytes = archive.read("word/document.xml")
     text = visible_text(xml_bytes)
@@ -295,6 +304,7 @@ def scan_counts(source: Path) -> Counter[str]:
 
 
 def main() -> None:
+    """Parse command-line options and process the selected documents."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--write",
