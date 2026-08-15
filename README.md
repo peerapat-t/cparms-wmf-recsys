@@ -33,6 +33,27 @@ keep their auxiliary-signal construction beside the model that consumes it.
 one another. They keep their generators and ALS update code local so each
 variant can be inspected independently.
 
+### Baseline Venues
+
+Six of the seven non-proposed models reimplement a published method. ItemPop
+is a standard non-personalized heuristic with no single source paper, so it is
+omitted. Venue tiers are [CORE2023](http://portal.core.edu.au/conf-ranks/)
+ratings, the most recent official CORE conference ranking.
+
+| Model | Paper | Venue | CORE rank |
+| --- | --- | --- | --- |
+| Standard-WMF | Hu, Koren & Volinsky, "Collaborative Filtering for Implicit Feedback Datasets" | ICDM 2008 | A* |
+| CoFactor | Liang, Altosaar, Charlin & Blei, "Factorization Meets the Item Embedding: Regularizing Matrix Factorization with Item Co-occurrence" | RecSys 2016 | A (B in CORE2018; upgraded in CORE2023) |
+| RME | Tran, Lee, Liao & Lee, "Regularizing Matrix Factorization with User and Item Embeddings for Recommendation" | CIKM 2018 | A |
+| BPR-MF | Rendle, Freudenthaler, Gantner & Schmidt-Thieme, "BPR: Bayesian Personalized Ranking from Implicit Feedback" | UAI 2009 | A (A* in CORE2018) |
+| NeuMF | He, Liao, Zhang, Nie, Hu & Chua, "Neural Collaborative Filtering" | WWW 2017 | A* |
+| LightGCN | He, Deng, Wang, Li, Zhang & Wang, "LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation" | SIGIR 2020 | A* |
+
+All six venues are A or A* under CORE2023, so every baseline is reimplemented
+from a top-tier publication in its subfield (data mining, recommender
+systems, knowledge management, uncertainty in AI, the web, and information
+retrieval, respectively).
+
 ## Feedback Matrices
 
 `util/feedback.py` centralizes the conversion from raw ratings to the matrices
