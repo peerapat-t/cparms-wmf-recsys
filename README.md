@@ -18,16 +18,16 @@ keep their auxiliary-signal construction beside the model that consumes it.
 
 | Notebook key | Model | Implementation | Role |
 | --- | --- | --- | --- |
-| `01 ItemPop` | ItemPop | `model/base_model/itempop.py` | Deterministic global positive-popularity baseline. |
-| `02 Standard-WMF` | Standard-WMF | `model/base_model/standard.py` | ALS-trained implicit-feedback WMF, no auxiliary signal. |
-| `03 CoFactor` | CoFactor | `model/base_model/cofactor.py` | WMF with shared item factors regularized by an item-item SPPMI term. |
-| `04 RME` | RME | `model/base_model/rme.py` | WMF regularized by three SPPMI co-occurrence terms: item-item positive, item-item negative, and user-user positive. |
-| `05 BPR-MF` | BPR-MF | `model/base_model/bpr.py` | Matrix factorization optimized with standard pairwise BPR-Opt/LearnBPR. |
-| `06 NeuMF` | NeuMF | `model/base_model/neumf.py` | Neural matrix factorization combining GMF and MLP branches. |
-| `07 LightGCN` | LightGCN | `model/base_model/lightgcn.py` | Linear user-item graph propagation optimized with BPR loss. |
-| `08 CPARMS-L` | CPARMS-L | `model/base_model/cparms_liked.py` | WMF regularized by a like-only CPARMS association-rule signal (user-cluster and item-cluster antecedents). |
-| `09 CPARMS-D` | CPARMS-D | `model/base_model/cparms_disliked.py` | WMF regularized by a dislike-only CPARMS association-rule signal. |
-| `10 CPARMS-LD` | CPARMS-LD | `model/base_model/cparms_all.py` | WMF jointly regularized by separately weighted liked and disliked CPARMS signals. |
+| `01 ItemPop` | ItemPop | `model/baseline/itempop.py` | Deterministic global positive-popularity baseline. |
+| `02 Standard-WMF` | Standard-WMF | `model/baseline/standard.py` | ALS-trained implicit-feedback WMF, no auxiliary signal. |
+| `03 CoFactor` | CoFactor | `model/baseline/cofactor.py` | WMF with shared item factors regularized by an item-item SPPMI term. |
+| `04 RME` | RME | `model/baseline/rme.py` | WMF regularized by three SPPMI co-occurrence terms: item-item positive, item-item negative, and user-user positive. |
+| `05 BPR-MF` | BPR-MF | `model/baseline/bpr.py` | Matrix factorization optimized with standard pairwise BPR-Opt/LearnBPR. |
+| `06 NeuMF` | NeuMF | `model/baseline/neumf.py` | Neural matrix factorization combining GMF and MLP branches. |
+| `07 LightGCN` | LightGCN | `model/baseline/lightgcn.py` | Linear user-item graph propagation optimized with BPR loss. |
+| `08 CPARMS-L` | CPARMS-L | `model/proposed/cparms_liked.py` | WMF regularized by a like-only CPARMS association-rule signal (user-cluster and item-cluster antecedents). |
+| `09 CPARMS-D` | CPARMS-D | `model/proposed/cparms_disliked.py` | WMF regularized by a dislike-only CPARMS association-rule signal. |
+| `10 CPARMS-LD` | CPARMS-LD | `model/proposed/cparms_all.py` | WMF jointly regularized by separately weighted liked and disliked CPARMS signals. |
 
 `cparms_liked.py`, `cparms_disliked.py`, and `cparms_all.py` do not import from
 one another. They keep their generators and ALS update code local so each
@@ -190,7 +190,7 @@ inside a partition to their maximum rating.
 | Ranking cutoffs | `10`, `20`, `50`, `100`, `200` |
 | Selection metric | Validation overall `NDCG@10` |
 | User activity groups | `interaction_0`, `interaction_1`, `interaction_2`, `interaction_3_plus` |
-| Selected datasets | `01_amz_beauty` (the repository contains five prepared CSVs; toggle them via `SELECTED_DATASETS`) |
+| Selected datasets | All five prepared CSVs (`01_amz_beauty`, `02_amz_industry`, `03_amz_pantry`, `04_amz_music`, `05_amz_instruments`); toggle them via `SELECTED_DATASETS` |
 | Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 BPR-MF`, `06 NeuMF`, `07 LightGCN`, `08 CPARMS-L`, `09 CPARMS-D`, `10 CPARMS-LD` |
 | Output workbook | `results/final_results_<utc_timestamp>.xlsx` |
 | Output sheets | `results`, `seed_summary`, `best_hyperparameters`, `significance`, `dataset_eda` |
@@ -478,8 +478,7 @@ count out-of-scope item-cold-start events that were dropped. Density is
 ## Datasets
 
 `SELECTED_DATASETS` maps a notebook key to a CSV path. The repository includes
-five prepared CSVs, while the current notebook selects only
-`01_amz_beauty`:
+five prepared CSVs, and the current notebook selects all five:
 
 | Notebook key | File |
 | --- | --- |
@@ -538,14 +537,15 @@ cparms-wmf-recsys/
 |   |-- hyperparams_set.py       # Reproducible random hyperparameter sampling
 |   `-- significance.py          # Paired per-user t-test between models
 |-- model/
-|   `-- base_model/
-|       |-- itempop.py           # Global-popularity baseline
-|       |-- standard.py          # Standard implicit WMF
-|       |-- cofactor.py          # CoFactor: WMF + item-item SPPMI
-|       |-- rme.py               # RME: WMF + item-pos/item-neg/user-pos SPPMI
-|       |-- bpr.py               # Pairwise BPR matrix factorization
-|       |-- neumf.py             # Neural matrix factorization
-|       |-- lightgcn.py          # Graph collaborative filtering
+|   |-- baseline/
+|   |   |-- itempop.py           # Global-popularity baseline
+|   |   |-- standard.py          # Standard implicit WMF
+|   |   |-- cofactor.py          # CoFactor: WMF + item-item SPPMI
+|   |   |-- rme.py               # RME: WMF + item-pos/item-neg/user-pos SPPMI
+|   |   |-- bpr.py               # Pairwise BPR matrix factorization
+|   |   |-- neumf.py             # Neural matrix factorization
+|   |   `-- lightgcn.py          # Graph collaborative filtering
+|   `-- proposed/
 |       |-- cparms_liked.py      # CPARMS-L: WMF + liked-rule signal
 |       |-- cparms_disliked.py   # CPARMS-D: WMF + disliked-rule signal
 |       `-- cparms_all.py        # CPARMS-LD: jointly regularized WMF
