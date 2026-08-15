@@ -63,41 +63,12 @@ not just for CPARMS: evaluation relevance (`ranking_metrics_at_k`), every
 model's `L` fit matrix, and both CPARMS generators. Results produced under the
 old `3.0` threshold are not comparable to results produced under `4.0`.
 
-## Methods
+## CPARMS Method
 
-### Standard-WMF
-
-`WMF` factorizes the binary positive-feedback matrix `L` with ALS.
-Unobserved and non-positive pairs use confidence `1`; positive pairs use
-confidence `1 + alpha`. The model stores user factors in `P`, item factors in
-`Q`, and scores a user with `Q @ P[user_idx]`.
-
-Reference snapshots used for this audit:
-
-| Baseline | Upstream implementation | Audited commit |
-| --- | --- | --- |
-| Standard-WMF | [CoFactor `content_wmf.py` / `batched_inv_joblib.py`](https://github.com/dawenl/CoFactor/tree/6364b44f16ad8c1139407fec8c1a41d5da6291cb/src) | `6364b44f16ad8c1139407fec8c1a41d5da6291cb` |
-| CoFactor | [CoFactor](https://github.com/dawenl/CoFactor) | `6364b44f16ad8c1139407fec8c1a41d5da6291cb` |
-| RME | [thanhdtran/RME](https://github.com/thanhdtran/RME) | `b967866edd946cb91e796074150bffeaa351c8fb` |
-| BPR-MF | [MyMediaLite BPRMF](https://github.com/zenogantner/MyMediaLite/blob/master/src/MyMediaLite/ItemRecommendation/BPRMF.cs) | Reference implementation |
-| NeuMF | [neural_collaborative_filtering](https://github.com/hexiangnan/neural_collaborative_filtering) | Official implementation |
-| LightGCN | [LightGCN-PyTorch](https://github.com/gusye1234/LightGCN-PyTorch) | Official implementation |
-
-The source-to-local parameter mapping used by the implementations is:
-
-| Baseline | Source-equivalent local formulation |
-| --- | --- |
-| Standard-WMF | Binary target `L`; confidence `1 + alpha * L`; exact Hu/content-WMF ALS normal equations. |
-| CoFactor | `alpha = c1/c0 - 1`, co-occurrence weight `gamma = 1/c0 = 1/ell`, and every regularizer divided by `c0`; the shared item factor is updated jointly from WMF and SPPMI. |
-| RME | Released `c0=1`, `c1=10`, `mu=1` maps to the searchable source-anchor values `alpha=9` and auxiliary weights `(item-like, item-dislike, user-like)=(10,10,1)`. |
-| BPR-MF | Shuffled positive pairs without replacement per epoch, one uniform unobserved item per pair, item bias, and separate bias/user/positive-item/negative-item regularization. |
-| NeuMF | Separate GMF/MLP embeddings, binary cross-entropy, Adam, and four uniformly sampled negatives per positive. |
-| LightGCN | Symmetric normalized graph propagation, mean aggregation from layer zero through layer `K`, and BPR loss with one negative per sampled user. |
-
-The rating-to-positive threshold, temporal full-catalog evaluation, validation
-selection, and independent RNG streams that preserve item initialization when
-padded users are added are experiment-protocol adaptations and are not
-behavior copied from those repositories.
+`08 CPARMS-L`, `09 CPARMS-D`, and `10 CPARMS-LD` are the proposed method and
+its variants; the other seven enabled models (`01 ItemPop`, `02 Standard-WMF`,
+`03 CoFactor`, `04 RME`, `05 BPR-MF`, `06 NeuMF`, `07 LightGCN`) are the
+comparison baselines listed in [Models](#models) above.
 
 ### CPARMS Signals
 
@@ -146,68 +117,6 @@ The `_net_signal()` helper is used only to log the density of
 In every CPARMS variant, shared item factors are learned from users with
 observed fit-window ratings. Evaluation-only users are folded in from their
 learned CPARMS signals while item factors remain fixed.
-
-### RME Signal
-
-`rme.py`'s `build_sppmi_matrix()` builds an entity-entity SPPMI matrix from any
-binary history matrix: pass a user-item matrix for item-item co-occurrence, or
-its transpose for user-user co-occurrence. `cofactor.py` contains the analogous
-item-specific `build_item_sppmi_matrix()`. `RME` builds three matrices from `Y` --
-item-item positive (from `L`), item-item negative (from `D`), and user-user
-positive (from `L^T`) -- and regularizes the shared user/item WMF factors with
-all three simultaneously, each through its own context-embedding side, a
-primary/context bias pair, and a per-term global bias ("intercept"): item-item
-positive is `X_pi - β_p^T γ_i - b_p - c_i - g` (item-item negative and
-user-user positive follow the same pattern with their own bias pair and
-intercept `g`).
-
-The upstream paper's own Equation (4)/(8) only show the primary/context bias
-pair and omit this global-bias term. However, the authors' released reference
-code
-([`MultiProcessParallelSolver.py`](https://github.com/thanhdtran/RME/blob/master/MultiProcessParallelSolver.py),
-`InterceptUpdateWorker`) does maintain one intercept per auxiliary term
-(`global_x_p`, `global_x_n`, `global_y_p` in their code), refit every sweep as
-the mean residual over that term's nonzero co-occurrence entries. Since that
-code is what actually produced the paper's reported results, `rme.py` follows
-it rather than the paper's simplified equations -- the same per-term global
-bias pattern this repo's `CoFactor` already uses for its single SPPMI term.
-
-This implementation omits RME's per-user/per-item negative-sampling inference
-step for unobserved co-occurrence (Algorithm 2 in the paper). That algorithm
-only applies to implicit-feedback datasets, where dislike cannot be observed
-directly; this project's data is explicit ratings, so the implicit-only
-imputation step is not used. The shared benchmark split intentionally differs
-from RME's paper cutoffs: this project uses `Y > 4` for likes and `0 < Y < 4`
-for dislikes (rating `4` is neutral), whereas the paper/released RME experiment
-uses `Y >= 4` and `Y <= 2`, respectively. `RME` keeps the same closed-form ALS
-style as the rest of this
-codebase rather than the paper's original parallel solver. The RME paper
-itself is archived at
-[`paper/literature-review/12 Regularizing Matrix Factorization with User and Item Embeddings for Recommendation.pdf`](paper/literature-review/12%20Regularizing%20Matrix%20Factorization%20with%20User%20and%20Item%20Embeddings%20for%20Recommendation.pdf).
-
-The upstream RME training path uses `c0=1`, `c1=10`, and all three `mu` values
-equal to one, corresponding locally to source-anchor gammas `(10,10,1)`. The
-benchmark includes those values but searches each auxiliary weight
-independently; context L2 remains a separately searched regularizer.
-
-### CoFactor Signal
-
-`build_item_sppmi_matrix()` builds an item-item SPPMI matrix from positive
-training history. It counts off-diagonal item co-occurrences, converts counts to
-PMI, and keeps positive values after subtracting `log(negative_samples)`.
-
-`CoFactor` combines the WMF loss with an item-item SPPMI term. It updates
-user factors, item factors, context factors, item/context biases, and the global
-co-occurrence bias used by the upstream `CoFacto` model. The implementation uses
-an algebraically equivalent confidence normalization: upstream `(c0,c1)` becomes
-`(1,c1/c0)`, while the co-occurrence and regularization weights are divided by
-`c0`. If `fit()` receives no item-item matrix and
-`gamma > 0`, it builds SPPMI internally; the final test notebook builds SPPMI
-explicitly for positive `gamma` so signal-generation runtime can be logged separately.
-
-The paper scales the WMF part of the objective by a relative scale `ell`. This
-implementation uses the algebraically equivalent `gamma = 1 / ell` on the
-co-occurrence part. Context regularization is searched independently.
 
 ## Experiment Workflow
 
@@ -594,52 +503,6 @@ into a later temporal split.
 No k-core filter is re-applied after deduplication: the `_5_core` suffix refers to the
 published 5-core source dumps, and collapsing duplicate `userid,itemid` pairs can leave
 some users or items with fewer than five remaining rows.
-
-## Setup
-
-The reproducible reference environment uses Python `3.13.5`; this version is also
-recorded in `.python-version`. Exact package versions are pinned in
-`requirements.txt`.
-
-Create and activate a virtual environment from the project root:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-## Running
-
-The prepared CSVs can be used immediately. If you instead supplied the raw
-Amazon dumps under `database/json/`, regenerate all five CSVs with:
-
-```powershell
-python database/preprocess.py
-```
-
-Start Jupyter from the project root:
-
-```powershell
-jupyter lab
-```
-
-Then run `notebook_experiments.ipynb` for dataset EDA, hyperparameter
-search, final retraining, test evaluation, and Excel export.
-
-The notebook uses relative paths such as `./database/csv` and `./results`, so the
-project root must be the working directory.
-
-Validation work scales as `datasets x N_ITER_RANDOM_SEARCH x tuned_models`
-because random search runs only under `TUNING_SEED` (nine tuned models by
-default: Standard-WMF, CoFactor, RME, BPR-MF, NeuMF, LightGCN, CPARMS-L,
-CPARMS-D, and CPARMS-LD). Final work scales as `sensitivity_seeds x datasets x
-enabled_models`. Change `SELECTED_DATASETS`, `MODEL_PARAM_KEY`,
-`N_ITER_RANDOM_SEARCH`, `TUNING_SEED`, or `SENSITIVITY_SEEDS` to adjust the
-run. With the checked-in selection (Beauty only, 50 rounds, five sensitivity
-seeds), the notebook performs 450 validation model fits followed by 50 final
-model fits.
 
 ## Project Structure
 
