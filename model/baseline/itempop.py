@@ -2,7 +2,11 @@
 
 import numpy as np
 
+from util.dtype_config import FLOAT_DTYPE
 from util.feedback import LIKE_THRESHOLD, to_L
+
+
+MODEL_DTYPE = FLOAT_DTYPE
 
 
 class ItemPop:
@@ -19,7 +23,7 @@ class ItemPop:
         self.user_count = int(user_count)
         self.item_count = int(item_count)
         self.threshold = float(threshold)
-        self.item_popularity = np.zeros(self.item_count, dtype=np.float64)
+        self.item_popularity = np.zeros(self.item_count, dtype=MODEL_DTYPE)
 
 
     @property
@@ -34,7 +38,7 @@ class ItemPop:
         if L.shape != self.shape:
             raise ValueError(f"Y must be shape {self.shape}.")
         self.item_popularity = (
-            np.asarray(L.sum(axis=0)).reshape(-1).astype(np.float64)
+            np.asarray(L.sum(axis=0)).reshape(-1).astype(MODEL_DTYPE)
         )
         return self
 

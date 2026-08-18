@@ -5,11 +5,12 @@ from numbers import Integral
 import numpy as np
 from scipy import sparse
 
+from util.dtype_config import FLOAT_DTYPE
 from util.feedback import LIKE_THRESHOLD, to_L, to_Y
 from util.seed_config import resolve_seed
 
 
-MODEL_DTYPE = np.float64
+MODEL_DTYPE = FLOAT_DTYPE
 
 
 def build_item_sppmi_matrix(

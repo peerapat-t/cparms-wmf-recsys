@@ -5,8 +5,12 @@ from numbers import Integral
 import numpy as np
 from scipy import sparse
 
+from util.dtype_config import FLOAT_DTYPE
 from util.feedback import to_L
 from util.seed_config import resolve_seed
+
+
+MODEL_DTYPE = FLOAT_DTYPE
 
 
 def validate_positive_int(name: str, value) -> int:
@@ -122,13 +126,13 @@ class BPRMF:
             0.0,
             0.1,
             size=(self.user_count, self.latent),
-        ).astype(np.float64)
+        ).astype(MODEL_DTYPE)
         self.item_factors = rng.normal(
             0.0,
             0.1,
             size=(self.item_count, self.latent),
-        ).astype(np.float64)
-        self.item_bias = np.zeros(self.item_count, dtype=np.float64)
+        ).astype(MODEL_DTYPE)
+        self.item_bias = np.zeros(self.item_count, dtype=MODEL_DTYPE)
 
     @property
     def shape(self) -> tuple[int, int]:

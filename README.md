@@ -185,7 +185,7 @@ inside a partition to their maximum rating.
 | Tuning seed | `42` (`TUNING_SEED`; random search runs only once) |
 | Sensitivity seeds | `42`, `43`, `44`, `45`, `46` (`SENSITIVITY_SEEDS`) |
 | Statistical-test seed | `42` (`STAT_TEST_SEED`; per-user paired test only) |
-| Search rounds | `50` unique random configurations per tuned model under the tuning seed, with no forced anchor; the best validation `NDCG@10` configuration is frozen |
+| Search rounds | `30` unique random configurations per tuned model under the tuning seed, with no forced anchor; the best validation `NDCG@10` configuration is frozen |
 | Split ratios | `70/10/20` train/validation/test |
 | Ranking cutoffs | `10`, `20`, `50`, `100`, `200` |
 | Selection metric | Validation overall `NDCG@10` |
@@ -194,6 +194,7 @@ inside a partition to their maximum rating.
 | Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 BPR-MF`, `06 NeuMF`, `07 LightGCN`, `08 CPARMS-L`, `09 CPARMS-D`, `10 CPARMS-LD` |
 | Output workbook | `results/final_results_<utc_timestamp>.xlsx` |
 | Output sheets | `results`, `seed_summary`, `best_hyperparameters`, `significance`, `dataset_eda` |
+| Floating-point dtype | `float32` for every model (`FLOAT_DTYPE` in `util/dtype_config.py`) |
 
 Every tuned model owns a separate search-space definition and a separate
 reproducible sampling stream. Standard-WMF, CoFactor, RME, CPARMS-L,
@@ -226,7 +227,7 @@ deterministic and therefore has zero seed variation apart from runtime noise.
 | --- | --- |
 | Shared WMF-family `latent` | `10`, `20`, `40`, `60`, `80`, `100` |
 | Shared WMF-family `lambda_rate` | `0.0001`, `0.001`, `0.01`, `0.1`, `1` |
-| Shared WMF-family `n_sweeps` | `10`, `20`, `30`, `40`, `50` |
+| Shared WMF-family `n_sweeps` | `5`, `10`, `15`, `20`, `25` |
 | Shared WMF-family `alpha` | `1`, `5`, `10`, `20`, `40`, `80` |
 | CPARMS-L/D/LD signal weights | `0.01`, `0.1`, `0.5`, `1`, `2`, `5`, `10` |
 | `normalize` | `row_max`, `log_row_max` |
@@ -552,6 +553,7 @@ cparms-wmf-recsys/
 |-- paper/                       # Thesis, paper, presentation, and references
 |-- results/                     # Generated Excel experiment outputs
 |-- util/
+|   |-- dtype_config.py         # Shared float32 dtype for every model
 |   |-- feedback.py             # Y/B/L/D feedback conversion helpers
 |   |-- seed_config.py          # Reproducibility helpers
 |   `-- signal_utils.py         # Signal-density logging helper

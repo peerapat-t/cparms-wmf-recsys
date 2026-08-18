@@ -8,12 +8,13 @@ from scipy import sparse
 from sklearn.cluster import KMeans
 from sklearn.exceptions import ConvergenceWarning
 
+from util.dtype_config import FLOAT_DTYPE
 from util.feedback import LIKE_THRESHOLD, to_B, to_D, to_L, to_Y
 from util.seed_config import resolve_seed
 
 
-MODEL_DTYPE = np.float64
-SIGNAL_DTYPE = np.float64
+MODEL_DTYPE = FLOAT_DTYPE
+SIGNAL_DTYPE = FLOAT_DTYPE
 COUNT_DTYPE = np.int64
 NORMALIZATION_MODES = frozenset({None, "row_max", "log_row_max"})
 

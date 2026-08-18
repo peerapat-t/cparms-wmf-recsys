@@ -9,8 +9,12 @@ from scipy.special import expit
 from torch import nn
 from torch.nn import functional as functional
 
+from util.dtype_config import FLOAT_DTYPE
 from util.feedback import to_B, to_L
 from util.seed_config import resolve_seed
+
+
+MODEL_DTYPE = FLOAT_DTYPE
 
 
 def validate_positive_int(name: str, value) -> int:
@@ -138,11 +142,11 @@ def _build_normalized_adjacency(
     source = np.concatenate([user_nodes, item_nodes])
     target = np.concatenate([item_nodes, user_nodes])
     degree = np.bincount(source, minlength=node_count).astype(np.float64)
-    values = np.zeros(source.size, dtype=np.float32)
+    values = np.zeros(source.size, dtype=MODEL_DTYPE)
     if source.size:
         values = (
             1.0 / np.sqrt(degree[source] * degree[target])
-        ).astype(np.float32, copy=False)
+        ).astype(MODEL_DTYPE, copy=False)
     indices = torch.as_tensor(
         np.vstack([source, target]),
         dtype=torch.long,
@@ -274,11 +278,11 @@ class LightGCN:
         self.adjacency = None
         self.user_factors = np.zeros(
             (self.user_count, self.latent),
-            dtype=np.float32,
+            dtype=MODEL_DTYPE,
         )
         self.item_factors = np.zeros(
             (self.item_count, self.latent),
-            dtype=np.float32,
+            dtype=MODEL_DTYPE,
         )
 
 
@@ -294,11 +298,11 @@ class LightGCN:
         with torch.no_grad():
             user_factors, item_factors = self.network.propagate(self.adjacency)
         self.user_factors = user_factors.detach().cpu().numpy().astype(
-            np.float32,
+            MODEL_DTYPE,
             copy=True,
         )
         self.item_factors = item_factors.detach().cpu().numpy().astype(
-            np.float32,
+            MODEL_DTYPE,
             copy=True,
         )
 
@@ -382,4 +386,4 @@ class LightGCN:
         if user_idx < 0 or user_idx >= self.user_count:
             raise IndexError("user_idx is out of range.")
         logits = self.item_factors @ self.user_factors[user_idx]
-        return expit(logits).astype(np.float32, copy=False)
+        return expit(logits).astype(MODEL_DTYPE, copy=False)

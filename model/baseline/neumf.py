@@ -7,8 +7,12 @@ import torch
 from scipy import sparse
 from torch import nn
 
+from util.dtype_config import FLOAT_DTYPE
 from util.feedback import to_B, to_L
 from util.seed_config import resolve_seed
+
+
+MODEL_DTYPE = FLOAT_DTYPE
 
 
 def validate_positive_int(name: str, value) -> int:
@@ -294,8 +298,8 @@ class NeuMF:
             items = np.concatenate([positive_items, negative_items])
             labels = np.concatenate(
                 [
-                    np.ones(positive_users.size, dtype=np.float32),
-                    np.zeros(negative_users.size, dtype=np.float32),
+                    np.ones(positive_users.size, dtype=MODEL_DTYPE),
+                    np.zeros(negative_users.size, dtype=MODEL_DTYPE),
                 ]
             )
             permutation = rng.permutation(users.size)
@@ -357,7 +361,7 @@ class NeuMF:
         batch_size = validate_positive_int("batch_size", batch_size)
         if user_idx < 0 or user_idx >= self.user_count:
             raise IndexError("user_idx is out of range.")
-        result = np.empty(self.item_count, dtype=np.float32)
+        result = np.empty(self.item_count, dtype=MODEL_DTYPE)
         self.network.eval()
         with torch.no_grad():
             for start in range(0, self.item_count, batch_size):

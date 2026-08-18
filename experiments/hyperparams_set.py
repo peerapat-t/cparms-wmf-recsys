@@ -10,7 +10,7 @@ from util.seed_config import resolve_seed
 PARAM_SPACE_STANDARD_WMF = {
     "latent": (10, 20, 40, 60, 80, 100),
     "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
-    "n_sweeps": (10, 15, 20, 25, 30),
+    "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
 }
 
@@ -19,7 +19,7 @@ PARAM_SPACE_STANDARD_WMF = {
 PARAM_SPACE_COFACTOR_WMF = {
     "latent": (10, 20, 40, 60, 80, 100),
     "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
-    "n_sweeps": (10, 15, 20, 25, 30),
+    "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
     "relative_scale": (0.01, 0.03, 0.1, 1.0, 10.0),
     "lambda_context_rate": (
@@ -39,7 +39,7 @@ PARAM_SPACE_COFACTOR_WMF = {
 PARAM_SPACE_RME = {
     "latent": (10, 20, 40, 60, 80, 100),
     "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
-    "n_sweeps": (10, 15, 20, 25, 30),
+    "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
     "gamma_item_pos": (0.1, 1.0, 5.0, 10.0, 20.0),
     "gamma_item_neg": (0.1, 1.0, 5.0, 10.0, 20.0),
@@ -90,7 +90,7 @@ PARAM_SPACE_LIGHTGCN = {
 PARAM_SPACE_CPARMS_L = {
     "latent": (10, 20, 40, 60, 80, 100),
     "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
-    "n_sweeps": (10, 15, 20, 25, 30),
+    "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
     "gamma": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
     "k_user": (1, 2, 3, 4, 5),
@@ -106,7 +106,7 @@ PARAM_SPACE_CPARMS_L = {
 PARAM_SPACE_CPARMS_D = {
     "latent": (10, 20, 40, 60, 80, 100),
     "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
-    "n_sweeps": (10, 15, 20, 25, 30),
+    "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
     "gamma": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
     "k_user": (1, 2, 3, 4, 5),
@@ -122,7 +122,7 @@ PARAM_SPACE_CPARMS_D = {
 PARAM_SPACE_CPARMS_LD = {
     "latent": (10, 20, 40, 60, 80, 100),
     "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
-    "n_sweeps": (10, 15, 20, 25, 30),
+    "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
     "gamma_like": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
     "gamma_dislike": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
