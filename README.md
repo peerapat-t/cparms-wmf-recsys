@@ -5,14 +5,14 @@
 This repository contains a reproducible, notebook-driven study of top-N
 recommendation under sparse feedback and new-user cold start. Explicit Amazon
 ratings are converted into liked, disliked, and seen interaction matrices, then
-used to compare ten non-personalized, matrix-factorization, neural, graph, and
+used to compare nine non-personalized, matrix-factorization, neural, graph, and
 CPARMS-regularized recommenders. `notebook_experiments.ipynb` runs temporal
 splitting, hyperparameter selection, final evaluation, significance testing,
 dataset EDA, and Excel export.
 
 ## Models
 
-The current notebook enables ten collaborative-filtering models. Each model has
+The current notebook enables nine collaborative-filtering models. Each model has
 one primary implementation file; CoFactor, RME, and the CPARMS variants also
 keep their auxiliary-signal construction beside the model that consumes it.
 
@@ -22,12 +22,11 @@ keep their auxiliary-signal construction beside the model that consumes it.
 | `02 Standard-WMF` | Standard-WMF | `model/baseline/standard.py` | ALS-trained implicit-feedback WMF, no auxiliary signal. |
 | `03 CoFactor` | CoFactor | `model/baseline/cofactor.py` | WMF with shared item factors regularized by an item-item SPPMI term. |
 | `04 RME` | RME | `model/baseline/rme.py` | WMF regularized by three SPPMI co-occurrence terms: item-item positive, item-item negative, and user-user positive. |
-| `05 BPR-MF` | BPR-MF | `model/baseline/bpr.py` | Matrix factorization optimized with standard pairwise BPR-Opt/LearnBPR. |
-| `06 NeuMF` | NeuMF | `model/baseline/neumf.py` | Neural matrix factorization combining GMF and MLP branches. |
-| `07 LightGCN` | LightGCN | `model/baseline/lightgcn.py` | Linear user-item graph propagation optimized with BPR loss. |
-| `08 CPARMS-L` | CPARMS-L | `model/proposed/cparms_liked.py` | WMF regularized by a like-only CPARMS association-rule signal (user-cluster and item-cluster antecedents). |
-| `09 CPARMS-D` | CPARMS-D | `model/proposed/cparms_disliked.py` | WMF regularized by a dislike-only CPARMS association-rule signal. |
-| `10 CPARMS-LD` | CPARMS-LD | `model/proposed/cparms_all.py` | WMF jointly regularized by separately weighted liked and disliked CPARMS signals. |
+| `05 NeuMF` | NeuMF | `model/baseline/neumf.py` | Neural matrix factorization combining GMF and MLP branches. |
+| `06 LightGCN` | LightGCN | `model/baseline/lightgcn.py` | Linear user-item graph propagation optimized with BPR loss. |
+| `07 CPARMS-L` | CPARMS-L | `model/proposed/cparms_liked.py` | WMF regularized by a like-only CPARMS association-rule signal (user-cluster and item-cluster antecedents). |
+| `08 CPARMS-D` | CPARMS-D | `model/proposed/cparms_disliked.py` | WMF regularized by a dislike-only CPARMS association-rule signal. |
+| `09 CPARMS-LD` | CPARMS-LD | `model/proposed/cparms_all.py` | WMF jointly regularized by separately weighted liked and disliked CPARMS signals. |
 
 `cparms_liked.py`, `cparms_disliked.py`, and `cparms_all.py` do not import from
 one another. They keep their generators and ALS update code local so each
@@ -35,7 +34,7 @@ variant can be inspected independently.
 
 ### Baseline Venues
 
-Six of the seven non-proposed models reimplement a published method. ItemPop
+Five of the six non-proposed models reimplement a published method. ItemPop
 is a standard non-personalized heuristic with no single source paper, so it is
 omitted. Venue tiers are [CORE2023](http://portal.core.edu.au/conf-ranks/)
 ratings, the most recent official CORE conference ranking.
@@ -45,14 +44,13 @@ ratings, the most recent official CORE conference ranking.
 | Standard-WMF | Hu, Koren & Volinsky, "Collaborative Filtering for Implicit Feedback Datasets" | ICDM 2008 | A* |
 | CoFactor | Liang, Altosaar, Charlin & Blei, "Factorization Meets the Item Embedding: Regularizing Matrix Factorization with Item Co-occurrence" | RecSys 2016 | A (B in CORE2018; upgraded in CORE2023) |
 | RME | Tran, Lee, Liao & Lee, "Regularizing Matrix Factorization with User and Item Embeddings for Recommendation" | CIKM 2018 | A |
-| BPR-MF | Rendle, Freudenthaler, Gantner & Schmidt-Thieme, "BPR: Bayesian Personalized Ranking from Implicit Feedback" | UAI 2009 | A (A* in CORE2018) |
 | NeuMF | He, Liao, Zhang, Nie, Hu & Chua, "Neural Collaborative Filtering" | WWW 2017 | A* |
 | LightGCN | He, Deng, Wang, Li, Zhang & Wang, "LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation" | SIGIR 2020 | A* |
 
-All six venues are A or A* under CORE2023, so every baseline is reimplemented
+All five venues are A or A* under CORE2023, so every baseline is reimplemented
 from a top-tier publication in its subfield (data mining, recommender
-systems, knowledge management, uncertainty in AI, the web, and information
-retrieval, respectively).
+systems, knowledge management, the web, and information retrieval,
+respectively).
 
 ## Feedback Matrices
 
@@ -86,9 +84,9 @@ old `3.0` threshold are not comparable to results produced under `4.0`.
 
 ## CPARMS Method
 
-`08 CPARMS-L`, `09 CPARMS-D`, and `10 CPARMS-LD` are the proposed method and
-its variants; the other seven enabled models (`01 ItemPop`, `02 Standard-WMF`,
-`03 CoFactor`, `04 RME`, `05 BPR-MF`, `06 NeuMF`, `07 LightGCN`) are the
+`07 CPARMS-L`, `08 CPARMS-D`, and `09 CPARMS-LD` are the proposed method and
+its variants; the other six enabled models (`01 ItemPop`, `02 Standard-WMF`,
+`03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`) are the
 comparison baselines listed in [Models](#models) above.
 
 ### CPARMS Signals
@@ -191,7 +189,7 @@ inside a partition to their maximum rating.
 | Selection metric | Validation overall `NDCG@10` |
 | User activity groups | `interaction_0`, `interaction_1`, `interaction_2`, `interaction_3_plus` |
 | Selected datasets | All five prepared CSVs (`01_amz_beauty`, `02_amz_industry`, `03_amz_pantry`, `04_amz_music`, `05_amz_instruments`); toggle them via `SELECTED_DATASETS` |
-| Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 BPR-MF`, `06 NeuMF`, `07 LightGCN`, `08 CPARMS-L`, `09 CPARMS-D`, `10 CPARMS-LD` |
+| Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`, `07 CPARMS-L`, `08 CPARMS-D`, `09 CPARMS-LD` |
 | Output workbook | `results/final_results_<utc_timestamp>.xlsx` |
 | Output sheets | `results`, `seed_summary`, `best_hyperparameters`, `significance`, `dataset_eda` |
 | Floating-point dtype | `float32` for every model (`FLOAT_DTYPE` in `util/dtype_config.py`) |
@@ -231,8 +229,8 @@ deterministic and therefore has zero seed variation apart from runtime noise.
 | Shared WMF-family `alpha` | `1`, `5`, `10`, `20`, `40`, `80` |
 | CPARMS-L/D/LD signal weights | `0.01`, `0.1`, `0.5`, `1`, `2`, `5`, `10` |
 | `normalize` | `row_max`, `log_row_max` |
-| `k_user` | `1`, `2`, `3`, `4`, `5` |
-| `K_item` | `1`, `2`, `3`, `4`, `5` |
+| `k_user` | `1`, `3`, `5`, `7`, `10` |
+| `K_item` | `1`, `3`, `5`, `7`, `10` |
 | `min_support` | `0.0`, `0.0001`, `0.0003`, `0.001`, `0.002` |
 | `min_confidence` | `0.0`, `0.0005`, `0.001`, `0.002`, `0.003` |
 | `min_lift` | `0.0`, `0.5`, `0.8`, `1.0`, `1.5` |
@@ -244,12 +242,6 @@ deterministic and therefore has zero seed variation apart from runtime noise.
 | RME `gamma_item_pos`, `gamma_item_neg` | Each independently drawn from `0.1`, `1`, `5`, `10`, `20` |
 | RME `gamma_user_pos` | `0.01`, `0.1`, `0.5`, `1`, `2` |
 | RME `negative_samples` | Fixed at reference value `1` |
-| BPR-MF `latent` | `8`, `16`, `32`, `64`, `128` |
-| BPR-MF learning rate | `0.01`, `0.025`, `0.05` |
-| BPR-MF user/positive-item L2 | Each independently drawn from `0.00025`, `0.0025`, `0.025` |
-| BPR-MF negative-item L2 | `0.000025`, `0.00025`, `0.0025` |
-| BPR-MF item-bias L2 | `0`, `0.0001`, `0.001`, `0.01` |
-| BPR-MF epochs | `10`, `25`, `50`, `100` |
 | NeuMF predictive factors | `8`, `16`, `32`, `64` |
 | NeuMF learning rate | `0.0001`, `0.0005`, `0.001`, `0.005` |
 | NeuMF MF/layer L2 | Each independently drawn from `0`, `0.000001`, `0.00001`, `0.0001` |
@@ -275,7 +267,7 @@ can explore cross-combinations of rule coverage, confidence, and lift filtering.
 
 `experiments/significance.py` runs a paired t-test (`scipy.stats.ttest_rel`)
 on per-user NDCG@`SELECTION_K` between `SIGNIFICANCE_PRIMARY_MODEL` (currently
-`10 CPARMS-LD`) and every other model evaluated on the same dataset, for the
+`09 CPARMS-LD`) and every other model evaluated on the same dataset, for the
 overall population and for each user activity group. `ranking_metrics_at_k(...,
 return_per_user=True)` is what makes this possible: it returns each evaluated
 user's own NDCG vector alongside the usual aggregated means, so two models'
@@ -356,10 +348,6 @@ hidden_layers
 reg_mf
 reg_layers
 n_layers
-lambda_user
-lambda_positive
-lambda_negative
-lambda_bias
 k_user
 K_item
 min_support
@@ -375,7 +363,7 @@ one rule-mining config shared by CPARMS-L, CPARMS-D, and CPARMS-LD -- see
 Parameter columns depend on the enabled models; unused model-specific parameter
 columns are blank. Because ItemPop is not tuned, its rows carry no hyperparameter
 values and its `validation_selection_score` is `NaN`. `s_mat_runtime` is `0` for
-ItemPop, Standard-WMF, BPR-MF, NeuMF, and LightGCN. It records explicit SPPMI
+ItemPop, Standard-WMF, NeuMF, and LightGCN. It records explicit SPPMI
 construction for CoFactor and rule-signal construction for the CPARMS variants.
 RME builds its three SPPMI matrices inside `fit()`, so that work is included in
 `model_runtime`. All runtime values are recorded in minutes.
@@ -454,6 +442,8 @@ split
 n_users
 n_items
 n_interactions
+n_liked
+n_disliked
 n_users_eval
 n_future_user_interactions_padded
 n_future_user_positive_targets_padded
@@ -475,6 +465,10 @@ fit-window rating; eligibility requires a positive evaluation target.
 known-item events retained for those padded users, while the future-item columns
 count out-of-scope item-cold-start events that were dropped. Density is
 `interactions / (users * items) * 100`, and sparsity is `100 - density`.
+`n_liked` counts ratings strictly above `LIKE_THRESHOLD` and `n_disliked`
+counts positive ratings strictly below `DISLIKE_THRESHOLD` (see
+[Feedback Matrices](#feedback-matrices)); their sum is `<=` `n_interactions`
+because ratings exactly at the threshold count in neither.
 
 ## Datasets
 
@@ -543,7 +537,6 @@ cparms-wmf-recsys/
 |   |   |-- standard.py          # Standard implicit WMF
 |   |   |-- cofactor.py          # CoFactor: WMF + item-item SPPMI
 |   |   |-- rme.py               # RME: WMF + item-pos/item-neg/user-pos SPPMI
-|   |   |-- bpr.py               # Pairwise BPR matrix factorization
 |   |   |-- neumf.py             # Neural matrix factorization
 |   |   `-- lightgcn.py          # Graph collaborative filtering
 |   `-- proposed/

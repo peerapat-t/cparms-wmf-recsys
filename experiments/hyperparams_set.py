@@ -49,18 +49,6 @@ PARAM_SPACE_RME = {
 }
 
 
-# BPR-MF-only search space.
-PARAM_SPACE_BPR = {
-    "latent": (8, 16, 32, 64, 128),
-    "learning_rate": (0.01, 0.025, 0.05),
-    "lambda_user": (0.00025, 0.0025, 0.025),
-    "lambda_positive": (0.00025, 0.0025, 0.025),
-    "lambda_negative": (0.000025, 0.00025, 0.0025),
-    "lambda_bias": (0.0, 0.0001, 0.001, 0.01),
-    "epochs": (10, 25, 50, 100),
-}
-
-
 # NeuMF-only search space. ``latent`` is the predictive-factor count;
 # ``hidden_layers`` is derived from it after sampling.
 PARAM_SPACE_NEUMF = {
@@ -93,8 +81,8 @@ PARAM_SPACE_CPARMS_L = {
     "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
     "gamma": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-    "k_user": (1, 2, 3, 4, 5),
-    "K_item": (1, 2, 3, 4, 5),
+    "k_user": (1, 3, 5, 7, 10),
+    "K_item": (1, 3, 5, 7, 10),
     "min_support": (0.0, 0.0001, 0.0003, 0.001, 0.002),
     "min_confidence": (0.0, 0.0005, 0.001, 0.002, 0.003),
     "min_lift": (0.0, 0.5, 0.8, 1.0, 1.5),
@@ -109,8 +97,8 @@ PARAM_SPACE_CPARMS_D = {
     "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
     "gamma": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-    "k_user": (1, 2, 3, 4, 5),
-    "K_item": (1, 2, 3, 4, 5),
+    "k_user": (1, 3, 5, 7, 10),
+    "K_item": (1, 3, 5, 7, 10),
     "min_support": (0.0, 0.0001, 0.0003, 0.001, 0.002),
     "min_confidence": (0.0, 0.0005, 0.001, 0.002, 0.003),
     "min_lift": (0.0, 0.5, 0.8, 1.0, 1.5),
@@ -118,16 +106,19 @@ PARAM_SPACE_CPARMS_D = {
 }
 
 
-# CPARMS-LD-only search space.
+# CPARMS-LD-only search space. A single k_user/K_item/min_support/
+# min_confidence/min_lift/normalize set is sampled for LD as a whole (not
+# split into separate liked/disliked configs) and reused by both its
+# internal liked and disliked generators.
 PARAM_SPACE_CPARMS_LD = {
     "latent": (10, 20, 40, 60, 80, 100),
     "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
     "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
-    "gamma_like": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-    "gamma_dislike": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-    "k_user": (1, 2, 3, 4, 5),
-    "K_item": (1, 2, 3, 4, 5),
+    "gamma_like": (0.01, 0.1, 0.5, 1.0, 5.0, 5.0),
+    "gamma_dislike": (0.01, 0.1, 0.5, 1.0, 5.0, 5.0),
+    "k_user": (1, 3, 5, 7, 10),
+    "K_item": (1, 3, 5, 7, 10),
     "min_support": (0.0, 0.0001, 0.0003, 0.001, 0.002),
     "min_confidence": (0.0, 0.0005, 0.001, 0.002, 0.003),
     "min_lift": (0.0, 0.5, 0.8, 1.0, 1.5),
@@ -139,7 +130,6 @@ MODEL_PARAM_SPACES = {
     "standard_wmf": PARAM_SPACE_STANDARD_WMF,
     "cofactor_wmf": PARAM_SPACE_COFACTOR_WMF,
     "rme": PARAM_SPACE_RME,
-    "bpr": PARAM_SPACE_BPR,
     "neumf": PARAM_SPACE_NEUMF,
     "lightgcn": PARAM_SPACE_LIGHTGCN,
     "cparms_l": PARAM_SPACE_CPARMS_L,

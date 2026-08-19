@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy import sparse
 
-from util.feedback import LIKE_THRESHOLD
+from util.feedback import DISLIKE_THRESHOLD, LIKE_THRESHOLD
 
 
 SparseMatrix = sparse.csr_matrix
@@ -39,11 +39,16 @@ def _dataset_eda_stats(df: pd.DataFrame) -> dict:
     n_items = int(df["itemid"].nunique())
     n_interactions = int(len(df))
     density_pct = 100.0 * n_interactions / (n_users * n_items)
+    ratings = df["rating"].to_numpy(dtype=float, copy=False)
+    n_liked = int((ratings > LIKE_THRESHOLD).sum())
+    n_disliked = int(((ratings > 0.0) & (ratings < DISLIKE_THRESHOLD)).sum())
 
     return {
         "n_users": n_users,
         "n_items": n_items,
         "n_interactions": n_interactions,
+        "n_liked": n_liked,
+        "n_disliked": n_disliked,
         "n_users_eval": None,
         "n_future_user_interactions_padded": None,
         "n_future_user_positive_targets_padded": None,
@@ -59,7 +64,7 @@ def _dataset_eda_stats(df: pd.DataFrame) -> dict:
 
 
 def _matrix_eda_stats(matrix: SparseMatrix) -> dict:
-    """Summarize the active dimensions and density of a sparse matrix."""
+    """Summarize the active dimensions, density, and L/D split of a matrix."""
     n_users = int(np.count_nonzero(matrix.getnnz(axis=1)))
     n_items = int(np.count_nonzero(matrix.getnnz(axis=0)))
     n_interactions = int(matrix.nnz)
@@ -68,11 +73,17 @@ def _matrix_eda_stats(matrix: SparseMatrix) -> dict:
         if n_users and n_items
         else 0.0
     )
+    n_liked = int((matrix.data > LIKE_THRESHOLD).sum())
+    n_disliked = int(
+        ((matrix.data > 0.0) & (matrix.data < DISLIKE_THRESHOLD)).sum()
+    )
 
     return {
         "n_users": n_users,
         "n_items": n_items,
         "n_interactions": n_interactions,
+        "n_liked": n_liked,
+        "n_disliked": n_disliked,
         "density_pct": density_pct,
         "sparsity_pct": 100.0 - density_pct,
     }
@@ -115,6 +126,8 @@ def _evaluation_eda_stats(
         "n_users": matrix_stats["n_users"],
         "n_items": matrix_stats["n_items"],
         "n_interactions": matrix_stats["n_interactions"],
+        "n_liked": matrix_stats["n_liked"],
+        "n_disliked": matrix_stats["n_disliked"],
         "n_users_eval": sum(interaction_groups.values()),
         **interaction_groups,
         "density_pct": matrix_stats["density_pct"],
