@@ -586,7 +586,7 @@ For each user, we remove all seen items ($\mathbf{B}$, not only liked items) fro
 
 \subsection{Hyperparameter Search}\label{sec4_hyperparameter}
 
-We choose model hyperparameters by randomized search~\cite{bergstra2012random}. For each seed, we sample $30$ aligned configurations once and reuse them across all datasets. Within a trial, the WMF-based models share the factorization hyperparameters ($K$, $\lambda$, ALS sweeps, and $\alpha$). We draw CPARMS-specific choices from the same random stream after these shared values, while CoFactor-specific choices use an offset random stream. The experiment seed controls both factor initialization and K-means. For each dataset--seed pair, we keep the configuration with the best validation NDCG@10, then retrain the model on the combined training-plus-validation set before testing.
+We choose model hyperparameters by randomized search~\cite{bergstra2012random}. For each seed, we sample $30$ configurations per model once and reuse them across all datasets. Every tuned model has a separate reproducible random stream and independently draws all of its hyperparameters, including factorization parameters ($K$, $\lambda$, ALS sweeps, and $\alpha$) and any model-specific parameters. Models use the same candidate values where a hyperparameter has the same meaning, but values are not forced to match within a trial. The experiment seed controls both factor initialization and K-means. For each dataset--seed pair, we keep each model's configuration with the best validation NDCG@10, then retrain the model on the combined training-plus-validation set before testing.
 
 Table~\ref{tab:search_space} summarizes the search space. The CPARMS rule thresholds include zero and small positive values because rule-metric scales vary greatly across antecedent families under extreme sparsity. We keep the two auxiliary-term weights separate: CPARMS's $\gamma$ weights a user--item signal on a $[0,1]$ scale, while CoFactor's $\gamma_{\mathrm{co}}$ weights an SPPMI target whose scale depends on co-occurrence statistics.
 
@@ -606,8 +606,8 @@ ALS sweeps                & \{15, 20, 25, 30\}                 & all WMF & ALS i
 Confidence $\alpha$       & \{10, 20, 40, 80\}                 & all WMF & confidence on positives \\
 Signal weight $\gamma$    & \{0.5, 1.0, 2.0, 4.0\}             & CPARMS  & weight of the signal term \\
 Signal normalization      & \{row\_max, log\_row\_max\}        & CPARMS  & signal scaling mode \\
-User clusters $K_U$       & \{1, 2, 3, 5\}                     & CPARMS  & user clusters \\
-Item clusters $K_I$       & \{1, 2, 3, 5\}                     & CPARMS  & item clusters \\
+User clusters $K_U$       & \{None, 1, 2, 3, 5\}               & CPARMS  & user clusters; None disables clustering \\
+Item clusters $K_I$       & \{None, 1, 2, 3, 5\}               & CPARMS  & item clusters; None disables clustering \\
 Min.\ support $\sigma_{\min}$  & \{0, 0.00005, 0.0001, 0.0003\} & CPARMS & support noise filter \\
 Min.\ confidence $\rho_{\min}$ & \{0, 0.0005, 0.001, 0.002\}    & CPARMS & confidence noise filter \\
 Min.\ lift $\ell_{\min}$       & \{0, 0.2, 0.5, 0.8\}           & CPARMS & lift noise filter \\

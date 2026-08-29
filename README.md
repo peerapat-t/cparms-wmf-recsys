@@ -2,21 +2,22 @@
 
 **Author:** Peerapat Tancharoen, KMITL
 
-This repository contains a reproducible, notebook-driven study of top-N
+This repository contains a reproducible study of top-N
 recommendation under sparse feedback and new-user cold start. Explicit Amazon
 ratings are converted into liked, disliked, and seen interaction matrices, then
-used to compare nine non-personalized, matrix-factorization, neural, graph, and
-CPARMS-regularized recommenders. `notebook_experiments.ipynb` runs temporal
+used to compare seven non-personalized, matrix-factorization, neural, graph, and
+CPARMS-regularized recommenders. `run_experiments.py` (batch/GCE) and
+`run_experiments.ipynb` (interactive) run temporal
 splitting, hyperparameter selection, final evaluation, significance testing,
 dataset EDA, and Excel export.
 
 ## Models
 
-The current notebook enables nine collaborative-filtering models. Each model has
-one primary implementation file; CoFactor, RME, and the CPARMS variants also
+The current experiment runners enable seven collaborative-filtering models. Each model has
+one primary implementation file; CoFactor, RME, and CPARMS-LD also
 keep their auxiliary-signal construction beside the model that consumes it.
 
-| Notebook key | Model | Implementation | Role |
+| Model key | Model | Implementation | Role |
 | --- | --- | --- | --- |
 | `01 ItemPop` | ItemPop | `model/baseline/itempop.py` | Deterministic global positive-popularity baseline. |
 | `02 Standard-WMF` | Standard-WMF | `model/baseline/standard.py` | ALS-trained implicit-feedback WMF, no auxiliary signal. |
@@ -24,13 +25,10 @@ keep their auxiliary-signal construction beside the model that consumes it.
 | `04 RME` | RME | `model/baseline/rme.py` | WMF regularized by three SPPMI co-occurrence terms: item-item positive, item-item negative, and user-user positive. |
 | `05 NeuMF` | NeuMF | `model/baseline/neumf.py` | Neural matrix factorization combining GMF and MLP branches. |
 | `06 LightGCN` | LightGCN | `model/baseline/lightgcn.py` | Linear user-item graph propagation optimized with BPR loss. |
-| `07 CPARMS-L` | CPARMS-L | `model/proposed/cparms_liked.py` | WMF regularized by a like-only CPARMS association-rule signal (user-cluster and item-cluster antecedents). |
-| `08 CPARMS-D` | CPARMS-D | `model/proposed/cparms_disliked.py` | WMF regularized by a dislike-only CPARMS association-rule signal. |
-| `09 CPARMS-LD` | CPARMS-LD | `model/proposed/cparms_all.py` | WMF jointly regularized by separately weighted liked and disliked CPARMS signals. |
+| `07 CPARMS-LD` | CPARMS-LD | `model/proposed/cparms_all.py` | WMF jointly regularized by separately weighted liked and disliked CPARMS signals. |
 
-`cparms_liked.py`, `cparms_disliked.py`, and `cparms_all.py` do not import from
-one another. They keep their generators and ALS update code local so each
-variant can be inspected independently.
+`cparms_all.py` keeps both polarity-specific signal generators and the joint
+ALS update code in one implementation file.
 
 ### Baseline Venues
 
@@ -75,7 +73,7 @@ duplicate collapse, seen-item masking, and fit-window history.
 The threshold was moved from `3.0` to `4.0` (both `LIKE_THRESHOLD` and
 `DISLIKE_THRESHOLD` in `util/feedback.py`) because Amazon review ratings skew
 positive: measured across all five shipped datasets, a `3.0` split left `L:D`
-ratios between 9.9:1 and 40.1:1, too imbalanced for the CPARMS-D rule miner to
+ratios between 9.9:1 and 40.1:1, too imbalanced for the disliked-rule miner to
 find workable coverage. At `4.0`, the same datasets measure `L:D` between
 2.8:1 and 12.3:1. This changes what counts as a positive target everywhere,
 not just for CPARMS: evaluation relevance (`ranking_metrics_at_k`), every
@@ -84,17 +82,15 @@ old `3.0` threshold are not comparable to results produced under `4.0`.
 
 ## CPARMS Method
 
-`07 CPARMS-L`, `08 CPARMS-D`, and `09 CPARMS-LD` are the proposed method and
-its variants; the other six enabled models (`01 ItemPop`, `02 Standard-WMF`,
+`07 CPARMS-LD` is the proposed method; the other six enabled models
+(`01 ItemPop`, `02 Standard-WMF`,
 `03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`) are the
 comparison baselines listed in [Models](#models) above.
 
 ### CPARMS Signals
 
-Each of `Generator_CPARMS_Liked` (in `cparms_liked.py` and duplicated in
-`cparms_all.py`) and `Generator_CPARMS_Disliked` (in
-`cparms_disliked.py` and duplicated in `cparms_all.py`) builds a sparse
-user-item signal from a training matrix, from one polarity's history only
+`Generator_CPARMS_Liked` and `Generator_CPARMS_Disliked` in `cparms_all.py`
+each build a sparse user-item signal from a training matrix, from one polarity's history only
 (`L` for liked, `D` for disliked):
 
 1. Canonicalize raw feedback as `Y`, seen interactions as `B`, and this
@@ -118,28 +114,25 @@ user-item signal from a training matrix, from one polarity's history only
 11. Optionally normalize with per-row `row_max` or log-damped per-row
     `log_row_max` (`log1p` before row-max scaling).
 
-`CPARMS_L` (CPARMS-L) adds a signal term over the nonzero entries of
-the like-signal matrix `S`, weighted by `gamma`, pulling scores up toward the
-rule confidence. `CPARMS_D` (CPARMS-D) is the mirror image: its
-signal term pulls scores down toward the *negative* of the dislike-signal's
-rule confidence.
-
 `CPARMS_LD` (CPARMS-LD) consumes both matrices in the same ALS solve. The liked
 term pulls scores toward positive rule confidence with `gamma_like`; the
 disliked term pulls them toward negative rule confidence with
 `gamma_dislike`. When both signals contain the same user-item pair, both loss
 terms remain active and are balanced by their independently sampled weights.
+The search value `0.0` disables the corresponding polarity term, so the same
+LD implementation can test liked-only, disliked-only, and no-signal settings
+without maintaining separate model classes.
 The `_net_signal()` helper is used only to log the density of
-`S_liked - S_disliked` in the notebook; it is not the matrix optimized by
+`S_liked - S_disliked` in the runners; it is not the matrix optimized by
 `CPARMS_LD.fit()`.
 
-In every CPARMS variant, shared item factors are learned from users with
+In CPARMS-LD, shared item factors are learned from users with
 observed fit-window ratings. Evaluation-only users are folded in from their
 learned CPARMS signals while item factors remain fixed.
 
 ## Experiment Workflow
 
-`notebook_experiments.ipynb` runs the complete experiment:
+`run_experiments.py` and `run_experiments.ipynb` run the complete experiment:
 
 1. Load selected CSV files from `database/csv/`.
 2. Sort all events globally by `timestamp`, using original row order to break
@@ -175,11 +168,12 @@ The CSV inputs are expected to be deduplicated at the `userid,itemid` level.
 `_build_sparse_matrix()` still defensively collapses duplicate user-item events
 inside a partition to their maximum rating.
 
-## Current Notebook Configuration
+## Current Experiment Configuration
 
 | Setting | Value |
 | --- | --- |
-| Notebook | `notebook_experiments.ipynb` |
+| Batch runner | `run_experiments.py` |
+| Interactive notebook | `run_experiments.ipynb` |
 | Tuning seed | `42` (`TUNING_SEED`; random search runs only once) |
 | Sensitivity seeds | `42`, `43`, `44`, `45`, `46` (`SENSITIVITY_SEEDS`) |
 | Statistical-test seed | `42` (`STAT_TEST_SEED`; per-user paired test only) |
@@ -189,27 +183,23 @@ inside a partition to their maximum rating.
 | Selection metric | Validation overall `NDCG@10` |
 | User activity groups | `interaction_0`, `interaction_1`, `interaction_2`, `interaction_3_plus` |
 | Selected datasets | All five prepared CSVs (`01_amz_beauty`, `02_amz_industry`, `03_amz_pantry`, `04_amz_music`, `05_amz_instruments`); toggle them via `SELECTED_DATASETS` |
-| Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`, `07 CPARMS-L`, `08 CPARMS-D`, `09 CPARMS-LD` |
+| Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`, `07 CPARMS-LD` |
 | Output workbook | `results/final_results_<utc_timestamp>.xlsx` |
 | Output sheets | `results`, `seed_summary`, `best_hyperparameters`, `significance`, `dataset_eda` |
 | Floating-point dtype | `float32` for every model (`FLOAT_DTYPE` in `util/dtype_config.py`) |
 
-Every tuned model owns a separate search-space definition and a separate
-reproducible sampling stream. Standard-WMF, CoFactor, RME, CPARMS-L,
-CPARMS-D, and CPARMS-LD declare the same candidate values for the WMF
-backbone parameters (`latent`, `lambda_rate`, `n_sweeps`, and `alpha`), but
-each model draws its own values. Equal candidate values therefore do not force
-equal values within a random-search round.
+Every tuned model owns a complete search-space definition and a separate
+reproducible sampling stream. Standard-WMF, CoFactor, RME, and CPARMS-LD use
+the same candidate values for WMF-backbone fields
+that have the same meaning (`latent`, `lambda_rate`, `n_sweeps`, and
+`alpha`), but every model draws those fields independently. Within CPARMS-LD,
+its one sampled rule configuration is reused by its internal liked and
+disliked generators. Its `gamma_like` and `gamma_dislike` weights are sampled
+independently. All model streams
+are derived from `TUNING_SEED`, so changing one model's search space does not
+shift another model's draws.
 
-CPARMS-L, CPARMS-D, and CPARMS-LD likewise declare the same rule-mining
-candidate values (`k_user`, `K_item`, `min_support`, `min_confidence`,
-`min_lift`, and `normalize`) while drawing independently for each variant.
-Within CPARMS-LD, its one sampled rule configuration is still used for both
-the like and dislike generators. All model-specific streams are derived from
-`TUNING_SEED`, so changing one model's search space does not shift another
-model's draws.
-
-The final experiment follows a two-phase seed protocol. First, the notebook
+The final experiment follows a two-phase seed protocol. First, the runner
 runs the full validation search once and freezes the best hyperparameter set for
 each dataset/model. It then copies that set for every sensitivity run and
 replaces only `random_state` with the current sensitivity seed. This changes
@@ -219,18 +209,31 @@ only for `STAT_TEST_SEED`; the five fixed-hyperparameter runs are summarized
 separately with their mean and sample standard deviation. ItemPop is
 deterministic and therefore has zero seed variation apart from runtime noise.
 
+For an unattended GCE run, install the pinned dependencies and launch the
+batch runner from the repository root:
+
+```bash
+python -m pip install -r requirements.txt
+python run_experiments.py --check-only
+python -u run_experiments.py --rounds 30 2>&1 | tee experiment.log
+```
+
+Use `python run_experiments.py --help` for dataset, seed, and output-directory
+options. Relative input and output paths are resolved from the repository, so
+the command can also be invoked from another working directory.
+
 ## Hyperparameter Search Space
 
 | Parameter | Values |
 | --- | --- |
-| Shared WMF-family `latent` | `10`, `20`, `40`, `60`, `80`, `100` |
-| Shared WMF-family `lambda_rate` | `0.0001`, `0.001`, `0.01`, `0.1`, `1` |
-| Shared WMF-family `n_sweeps` | `5`, `10`, `15`, `20`, `25` |
-| Shared WMF-family `alpha` | `1`, `5`, `10`, `20`, `40`, `80` |
-| CPARMS-L/D/LD signal weights | `0.01`, `0.1`, `0.5`, `1`, `2`, `5`, `10` |
+| WMF-family `latent` candidates | `10`, `20`, `40`, `60`, `80`, `100` |
+| WMF-family `lambda_rate` candidates | `0.0001`, `0.001`, `0.01`, `0.1`, `1` |
+| WMF-family `n_sweeps` candidates | `5`, `10`, `15`, `20`, `25` |
+| WMF-family `alpha` candidates | `1`, `5`, `10`, `20`, `40`, `80` |
+| CPARMS-LD `gamma_like`/`gamma_dislike` | `0`, `0.1`, `0.5`, `1`, `2`, `5` |
 | `normalize` | `row_max`, `log_row_max` |
-| `k_user` | `1`, `3`, `5`, `7`, `10` |
-| `K_item` | `1`, `3`, `5`, `7`, `10` |
+| `k_user` | `None`, `1`, `2`, `3`, `5` |
+| `K_item` | `None`, `1`, `2`, `3`, `5` |
 | `min_support` | `0.0`, `0.0001`, `0.0003`, `0.001`, `0.002` |
 | `min_confidence` | `0.0`, `0.0005`, `0.001`, `0.002`, `0.003` |
 | `min_lift` | `0.0`, `0.5`, `0.8`, `1.0`, `1.5` |
@@ -238,7 +241,7 @@ deterministic and therefore has zero seed variation apart from runtime noise.
 | CoFactor `gamma` | Derived as `1 / ell` |
 | CoFactor normalized context L2 | `0.00001`, `0.0001`, `0.0003`, `0.001`, `0.01`, `0.1`, `1` |
 | CoFactor `negative_samples` | Fixed at reference value `1` |
-| RME `lambda_context_rate` | Independently drawn from the shared WMF regularization space |
+| RME `lambda_context_rate` | Independently drawn from the WMF regularization candidate values |
 | RME `gamma_item_pos`, `gamma_item_neg` | Each independently drawn from `0.1`, `1`, `5`, `10`, `20` |
 | RME `gamma_user_pos` | `0.01`, `0.1`, `0.5`, `1`, `2` |
 | RME `negative_samples` | Fixed at reference value `1` |
@@ -267,7 +270,7 @@ can explore cross-combinations of rule coverage, confidence, and lift filtering.
 
 `experiments/significance.py` runs a paired t-test (`scipy.stats.ttest_rel`)
 on per-user NDCG@`SELECTION_K` between `SIGNIFICANCE_PRIMARY_MODEL` (currently
-`09 CPARMS-LD`) and every other model evaluated on the same dataset, for the
+`07 CPARMS-LD`) and every other model evaluated on the same dataset, for the
 overall population and for each user activity group. `ranking_metrics_at_k(...,
 return_per_user=True)` is what makes this possible: it returns each evaluated
 user's own NDCG vector alongside the usual aggregated means, so two models'
@@ -356,15 +359,18 @@ min_lift
 normalize
 ```
 
-`k_user`/`K_item`/`min_support`/`min_confidence`/`min_lift`/`normalize` are the
-one rule-mining config shared by CPARMS-L, CPARMS-D, and CPARMS-LD -- see
-[Current Notebook Configuration](#current-notebook-configuration).
+Within one CPARMS-LD configuration, its sampled
+`k_user`/`K_item`/`min_support`/`min_confidence`/`min_lift`/`normalize` values
+are reused by its internal liked and disliked signal generators -- see
+[Current Experiment Configuration](#current-experiment-configuration).
+`k_user=None` disables user clustering, while `K_item=None` disables item
+clustering and its item-cluster-presence tokens.
 
 Parameter columns depend on the enabled models; unused model-specific parameter
 columns are blank. Because ItemPop is not tuned, its rows carry no hyperparameter
 values and its `validation_selection_score` is `NaN`. `s_mat_runtime` is `0` for
 ItemPop, Standard-WMF, NeuMF, and LightGCN. It records explicit SPPMI
-construction for CoFactor and rule-signal construction for the CPARMS variants.
+construction for CoFactor and rule-signal construction for CPARMS-LD.
 RME builds its three SPPMI matrices inside `fit()`, so that work is included in
 `model_runtime`. All runtime values are recorded in minutes.
 
@@ -472,10 +478,10 @@ because ratings exactly at the threshold count in neither.
 
 ## Datasets
 
-`SELECTED_DATASETS` maps a notebook key to a CSV path. The repository includes
-five prepared CSVs, and the current notebook selects all five:
+The dataset configuration maps a dataset key to a CSV path. The repository
+includes five prepared CSVs, and both runners select all five by default:
 
-| Notebook key | File |
+| Dataset key | File |
 | --- | --- |
 | `01_amz_beauty` | `database/csv/dataset_amazon_lux_beauty_5_core.csv` |
 | `02_amz_industry` | `database/csv/dataset_amazon_industry_5_core.csv` |
@@ -501,7 +507,8 @@ Input constraints enforced by `get_temporal_split()`:
 - At least three distinct timestamp groups must exist, since cut points are
   snapped to unique-timestamp boundaries.
 
-To change datasets, edit `SELECTED_DATASETS` in `notebook_experiments.ipynb`.
+For the batch runner, select datasets with `--datasets`; for interactive use,
+edit `SELECTED_DATASETS` in `run_experiments.ipynb`.
 To change which models run, edit `MODEL_PARAM_KEY`. It lists every model in report
 order and maps each one to its key in a hyperparameter sample; ItemPop maps to `None`
 because it has nothing to tune, so the random search skips it and it is fitted only at
@@ -540,8 +547,6 @@ cparms-wmf-recsys/
 |   |   |-- neumf.py             # Neural matrix factorization
 |   |   `-- lightgcn.py          # Graph collaborative filtering
 |   `-- proposed/
-|       |-- cparms_liked.py      # CPARMS-L: WMF + liked-rule signal
-|       |-- cparms_disliked.py   # CPARMS-D: WMF + disliked-rule signal
 |       `-- cparms_all.py        # CPARMS-LD: jointly regularized WMF
 |-- paper/                       # Thesis, paper, presentation, and references
 |-- results/                     # Generated Excel experiment outputs
@@ -551,7 +556,8 @@ cparms-wmf-recsys/
 |   |-- seed_config.py          # Reproducibility helpers
 |   `-- signal_utils.py         # Signal-density logging helper
 |-- .python-version             # Reference Python version
-|-- notebook_experiments.ipynb
+|-- run_experiments.ipynb       # Interactive experiment workflow
+|-- run_experiments.py          # Batch/GCE experiment runner
 |-- README.md
 `-- requirements.txt            # Pinned package versions
 ```

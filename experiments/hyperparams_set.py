@@ -74,51 +74,17 @@ PARAM_SPACE_LIGHTGCN = {
 }
 
 
-# CPARMS-L-only search space.
-PARAM_SPACE_CPARMS_L = {
-    "latent": (10, 20, 40, 60, 80, 100),
-    "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
-    "n_sweeps": (5, 10, 15, 20, 25),
-    "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
-    "gamma": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-    "k_user": (1, 3, 5, 7, 10),
-    "K_item": (1, 3, 5, 7, 10),
-    "min_support": (0.0, 0.0001, 0.0003, 0.001, 0.002),
-    "min_confidence": (0.0, 0.0005, 0.001, 0.002, 0.003),
-    "min_lift": (0.0, 0.5, 0.8, 1.0, 1.5),
-    "normalize": ("row_max", "log_row_max"),
-}
-
-
-# CPARMS-D-only search space.
-PARAM_SPACE_CPARMS_D = {
-    "latent": (10, 20, 40, 60, 80, 100),
-    "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
-    "n_sweeps": (5, 10, 15, 20, 25),
-    "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
-    "gamma": (0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-    "k_user": (1, 3, 5, 7, 10),
-    "K_item": (1, 3, 5, 7, 10),
-    "min_support": (0.0, 0.0001, 0.0003, 0.001, 0.002),
-    "min_confidence": (0.0, 0.0005, 0.001, 0.002, 0.003),
-    "min_lift": (0.0, 0.5, 0.8, 1.0, 1.5),
-    "normalize": ("row_max", "log_row_max"),
-}
-
-
-# CPARMS-LD-only search space. A single k_user/K_item/min_support/
-# min_confidence/min_lift/normalize set is sampled for LD as a whole (not
-# split into separate liked/disliked configs) and reused by both its
-# internal liked and disliked generators.
+# CPARMS-LD-only search space. Its single sampled rule-mining configuration
+# is reused by its liked and disliked signal generators.
 PARAM_SPACE_CPARMS_LD = {
     "latent": (10, 20, 40, 60, 80, 100),
     "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
     "n_sweeps": (5, 10, 15, 20, 25),
     "alpha": (1.0, 5.0, 10.0, 20.0, 40.0, 80.0),
-    "gamma_like": (0.01, 0.1, 0.5, 1.0, 5.0, 5.0),
-    "gamma_dislike": (0.01, 0.1, 0.5, 1.0, 5.0, 5.0),
-    "k_user": (1, 3, 5, 7, 10),
-    "K_item": (1, 3, 5, 7, 10),
+    "gamma_like": (0.0, 0.1, 0.5, 1.0, 2.0, 5.0),
+    "gamma_dislike": (0.0, 0.1, 0.5, 1.0, 2.0, 5.0),
+    "k_user": (None, 1, 2, 3, 5),
+    "K_item": (None, 1, 2, 3, 5),
     "min_support": (0.0, 0.0001, 0.0003, 0.001, 0.002),
     "min_confidence": (0.0, 0.0005, 0.001, 0.002, 0.003),
     "min_lift": (0.0, 0.5, 0.8, 1.0, 1.5),
@@ -132,8 +98,6 @@ MODEL_PARAM_SPACES = {
     "rme": PARAM_SPACE_RME,
     "neumf": PARAM_SPACE_NEUMF,
     "lightgcn": PARAM_SPACE_LIGHTGCN,
-    "cparms_l": PARAM_SPACE_CPARMS_L,
-    "cparms_d": PARAM_SPACE_CPARMS_D,
     "cparms_ld": PARAM_SPACE_CPARMS_LD,
 }
 
@@ -173,44 +137,39 @@ def generate_hyperparam_samples(
         raise ValueError("rounds must be a positive integer")
     rounds = int(rounds)
     resolved_seed = resolve_seed(global_seed)
-    model_rngs = {
-        model_key: random.Random(f"{resolved_seed}:{model_key}")
-        for model_key in MODEL_PARAM_SPACES
-    }
-
-    samples = []
-    seen_configurations = {}
-    attempts = 0
+    samples_by_model = {}
     max_attempts = max(1000, rounds * 100)
 
-    # Reject a round if it duplicates any model configuration already used.
-    while len(samples) < rounds:
-        attempts += 1
-        if attempts > max_attempts:
-            raise ValueError(
-                "rounds exceeds the number of unique configurations that "
-                "can be sampled reliably"
-            )
-
-        sampled_models = {
-            model_key: _finalize_sample(
+    # Build each model's unique sequence independently. A duplicate drawn for
+    # one model therefore cannot shift the accepted sequence of another model.
+    for model_key, space in MODEL_PARAM_SPACES.items():
+        rng = random.Random(f"{resolved_seed}:{model_key}")
+        model_samples = []
+        seen_configurations = set()
+        attempts = 0
+        while len(model_samples) < rounds:
+            attempts += 1
+            if attempts > max_attempts:
+                raise ValueError(
+                    f"rounds exceeds the number of unique {model_key} "
+                    "configurations that can be sampled reliably"
+                )
+            params = _finalize_sample(
                 model_key,
-                _sample_space(space, model_rngs[model_key]),
+                _sample_space(space, rng),
                 resolved_seed,
             )
-            for model_key, space in MODEL_PARAM_SPACES.items()
-        }
-        fingerprints = {
-            model_key: tuple(sorted(params.items()))
-            for model_key, params in sampled_models.items()
-        }
-        if any(
-            fingerprint in seen_configurations.get(model_key, set())
-            for model_key, fingerprint in fingerprints.items()
-        ):
-            continue
-        for model_key, fingerprint in fingerprints.items():
-            seen_configurations.setdefault(model_key, set()).add(fingerprint)
-        samples.append(sampled_models)
+            fingerprint = tuple(sorted(params.items()))
+            if fingerprint in seen_configurations:
+                continue
+            seen_configurations.add(fingerprint)
+            model_samples.append(params)
+        samples_by_model[model_key] = model_samples
 
-    return samples
+    return [
+        {
+            model_key: samples_by_model[model_key][round_idx]
+            for model_key in MODEL_PARAM_SPACES
+        }
+        for round_idx in range(rounds)
+    ]
