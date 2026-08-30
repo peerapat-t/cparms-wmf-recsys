@@ -307,7 +307,7 @@ class LightGCN:
         )
 
 
-    def fit(self, Y, epochs=1000, batch_size=2048, verbose_every=10):
+    def fit(self, Y, epochs=1000, batch_size=2048, verbose_every=5):
         """Fit graph embeddings with mini-batch BPR optimization."""
         epochs = validate_positive_int("epochs", epochs)
         batch_size = validate_positive_int("batch_size", batch_size)

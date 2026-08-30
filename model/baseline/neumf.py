@@ -255,7 +255,7 @@ class NeuMF:
         return self.user_count, self.item_count
 
 
-    def fit(self, Y, epochs=100, batch_size=256, verbose_every=10):
+    def fit(self, Y, epochs=100, batch_size=256, verbose_every=5):
         """Fit NeuMF on positive pairs and sampled negative examples."""
         epochs = validate_positive_int("epochs", epochs)
         batch_size = validate_positive_int("batch_size", batch_size)
