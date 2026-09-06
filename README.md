@@ -6,14 +6,13 @@ This repository contains a reproducible study of top-N
 recommendation under sparse feedback and new-user cold start. Explicit Amazon
 ratings are converted into liked, disliked, and seen interaction matrices, then
 used to compare seven non-personalized, matrix-factorization, neural, graph, and
-CPARMS-regularized recommenders. `run_experiments.py` (batch/GCE) and
-`run_experiments.ipynb` (interactive) run temporal
+CPARMS-regularized recommenders. `run_experiments.ipynb` runs temporal
 splitting, hyperparameter selection, final evaluation, significance testing,
 dataset EDA, and Excel export.
 
 ## Models
 
-The current experiment runners enable seven collaborative-filtering models. Each model has
+The experiment workflow enables seven collaborative-filtering models. Each model has
 one primary implementation file; CoFactor, RME, and CPARMS-LD also
 keep their auxiliary-signal construction beside the model that consumes it.
 
@@ -132,7 +131,7 @@ learned CPARMS signals while item factors remain fixed.
 
 ## Experiment Workflow
 
-`run_experiments.py` and `run_experiments.ipynb` run the complete experiment:
+`run_experiments.ipynb` runs the complete experiment:
 
 1. Load selected CSV files from `database/csv/`.
 2. Sort all events globally by `timestamp`, using original row order to break
@@ -172,7 +171,6 @@ inside a partition to their maximum rating.
 
 | Setting | Value |
 | --- | --- |
-| Batch runner | `run_experiments.py` |
 | Interactive notebook | `run_experiments.ipynb` |
 | Tuning seed | `42` (`TUNING_SEED`; random search runs only once) |
 | Sensitivity seeds | `42`, `43`, `44`, `45`, `46` (`SENSITIVITY_SEEDS`) |
@@ -182,7 +180,7 @@ inside a partition to their maximum rating.
 | Ranking cutoffs | `10`, `20`, `50`, `100`, `200` |
 | Selection metric | Validation overall `NDCG@10` |
 | User activity groups | `interaction_0`, `interaction_1`, `interaction_2`, `interaction_3_plus` |
-| Selected datasets | All five prepared CSVs (`01_amz_beauty`, `02_amz_industry`, `03_amz_pantry`, `04_amz_music`, `05_amz_instruments`); toggle them via `SELECTED_DATASETS` |
+| Dataset selection | Any subset of the five prepared CSVs; enable entries in `SELECTED_DATASETS` |
 | Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`, `07 CPARMS-LD` |
 | Output workbook | `results/final_results_<utc_timestamp>.xlsx` |
 | Output sheets | `results`, `seed_summary`, `best_hyperparameters`, `significance`, `dataset_eda` |
@@ -209,18 +207,15 @@ only for `STAT_TEST_SEED`; the five fixed-hyperparameter runs are summarized
 separately with their mean and sample standard deviation. ItemPop is
 deterministic and therefore has zero seed variation apart from runtime noise.
 
-For an unattended GCE run, install the pinned dependencies and launch the
-batch runner from the repository root:
+Install the pinned dependencies and launch JupyterLab from the repository root:
 
 ```bash
 python -m pip install -r requirements.txt
-python run_experiments.py --check-only
-python -u run_experiments.py --rounds 30 2>&1 | tee experiment.log
+python -m jupyter lab run_experiments.ipynb
 ```
 
-Use `python run_experiments.py --help` for dataset, seed, and output-directory
-options. Relative input and output paths are resolved from the repository, so
-the command can also be invoked from another working directory.
+Select datasets in `SELECTED_DATASETS` and configure seeds, search rounds, and
+evaluation cutoffs in the notebook's experiment-configuration cell.
 
 ## Hyperparameter Search Space
 
@@ -230,7 +225,7 @@ the command can also be invoked from another working directory.
 | WMF-family `lambda_rate` candidates | `0.0001`, `0.001`, `0.01`, `0.1`, `1` |
 | WMF-family `n_sweeps` candidates | `5`, `10`, `15`, `20`, `25` |
 | WMF-family `alpha` candidates | `1`, `5`, `10`, `20`, `40`, `80` |
-| CPARMS-LD `gamma_like`/`gamma_dislike` | `0`, `0.1`, `0.5`, `1`, `2`, `5` |
+| CPARMS-LD `gamma_like`/`gamma_dislike` | `0`, `0.01`, `0.1`, `0.5`, `1`, `2`, `5` |
 | `normalize` | `row_max`, `log_row_max` |
 | `k_user` | `None`, `1`, `2`, `3`, `5` |
 | `K_item` | `None`, `1`, `2`, `3`, `5` |
@@ -308,6 +303,8 @@ the protocol's true zero-interaction new-user group.
 
 The experiment writes `results/final_results_<utc_timestamp>.xlsx`, where the
 timestamp is generated in UTC with `%Y%m%d_%H%M%S`.
+This section documents the workbook schema only; numerical experiment results
+remain in the generated workbook and are not embedded in this README.
 
 ### `results`
 
@@ -365,6 +362,8 @@ are reused by its internal liked and disliked signal generators -- see
 [Current Experiment Configuration](#current-experiment-configuration).
 `k_user=None` disables user clustering, while `K_item=None` disables item
 clustering and its item-cluster-presence tokens.
+Zero-valued `gamma_like` or `gamma_dislike` is written as `0`; parameters set to
+`None` are represented as blank cells when pandas exports the table to Excel.
 
 Parameter columns depend on the enabled models; unused model-specific parameter
 columns are blank. Because ItemPop is not tuned, its rows carry no hyperparameter
@@ -406,6 +405,8 @@ One row is written for each enabled `dataset_name` x `model`. It records
 selected by the single tuning run. ItemPop has no tuned parameters. The
 `random_state` in this sheet is the tuning seed; the per-run `results` sheet
 records the sensitivity seed actually used for final retraining.
+This sheet contains only the selected configuration, not every configuration
+evaluated during random search.
 
 ### `significance`
 
@@ -479,7 +480,8 @@ because ratings exactly at the threshold count in neither.
 ## Datasets
 
 The dataset configuration maps a dataset key to a CSV path. The repository
-includes five prepared CSVs, and both runners select all five by default:
+includes five prepared CSVs; the notebook runs the entries enabled in
+`SELECTED_DATASETS`:
 
 | Dataset key | File |
 | --- | --- |
@@ -507,8 +509,7 @@ Input constraints enforced by `get_temporal_split()`:
 - At least three distinct timestamp groups must exist, since cut points are
   snapped to unique-timestamp boundaries.
 
-For the batch runner, select datasets with `--datasets`; for interactive use,
-edit `SELECTED_DATASETS` in `run_experiments.ipynb`.
+Select datasets by editing `SELECTED_DATASETS` in `run_experiments.ipynb`.
 To change which models run, edit `MODEL_PARAM_KEY`. It lists every model in report
 order and maps each one to its key in a hyperparameter sample; ItemPop maps to `None`
 because it has nothing to tune, so the random search skips it and it is fitted only at
@@ -557,7 +558,6 @@ cparms-wmf-recsys/
 |   `-- signal_utils.py         # Signal-density logging helper
 |-- .python-version             # Reference Python version
 |-- run_experiments.ipynb       # Interactive experiment workflow
-|-- run_experiments.py          # Batch/GCE experiment runner
 |-- README.md
 `-- requirements.txt            # Pinned package versions
 ```
