@@ -873,7 +873,7 @@ def _signal_loss(
     return float(gamma) * loss
 
 
-class CPARMS_LD:
+class CPARMS:
     """Factorize feedback jointly with liked and disliked CPARMS signals."""
 
 

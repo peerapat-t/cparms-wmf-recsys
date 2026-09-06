@@ -13,7 +13,7 @@ dataset EDA, and Excel export.
 ## Models
 
 The experiment workflow enables seven collaborative-filtering models. Each model has
-one primary implementation file; CoFactor, RME, and CPARMS-LD also
+one primary implementation file; CoFactor, RME, and CPARMS also
 keep their auxiliary-signal construction beside the model that consumes it.
 
 | Model key | Model | Implementation | Role |
@@ -24,9 +24,9 @@ keep their auxiliary-signal construction beside the model that consumes it.
 | `04 RME` | RME | `model/baseline/rme.py` | WMF regularized by three SPPMI co-occurrence terms: item-item positive, item-item negative, and user-user positive. |
 | `05 NeuMF` | NeuMF | `model/baseline/neumf.py` | Neural matrix factorization combining GMF and MLP branches. |
 | `06 LightGCN` | LightGCN | `model/baseline/lightgcn.py` | Linear user-item graph propagation optimized with BPR loss. |
-| `07 CPARMS-LD` | CPARMS-LD | `model/proposed/cparms_all.py` | WMF jointly regularized by separately weighted liked and disliked CPARMS signals. |
+| `07 CPARMS` | CPARMS | `model/proposed/cparms.py` | WMF jointly regularized by separately weighted liked and disliked CPARMS signals. |
 
-`cparms_all.py` keeps both polarity-specific signal generators and the joint
+`cparms.py` keeps both polarity-specific signal generators and the joint
 ALS update code in one implementation file.
 
 ### Baseline Venues
@@ -81,14 +81,14 @@ old `3.0` threshold are not comparable to results produced under `4.0`.
 
 ## CPARMS Method
 
-`07 CPARMS-LD` is the proposed method; the other six enabled models
+`07 CPARMS` is the proposed method; the other six enabled models
 (`01 ItemPop`, `02 Standard-WMF`,
 `03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`) are the
 comparison baselines listed in [Models](#models) above.
 
 ### CPARMS Signals
 
-`Generator_CPARMS_Liked` and `Generator_CPARMS_Disliked` in `cparms_all.py`
+`Generator_CPARMS_Liked` and `Generator_CPARMS_Disliked` in `cparms.py`
 each build a sparse user-item signal from a training matrix, from one polarity's history only
 (`L` for liked, `D` for disliked):
 
@@ -113,7 +113,7 @@ each build a sparse user-item signal from a training matrix, from one polarity's
 11. Optionally normalize with per-row `row_max` or log-damped per-row
     `log_row_max` (`log1p` before row-max scaling).
 
-`CPARMS_LD` (CPARMS-LD) consumes both matrices in the same ALS solve. The liked
+`CPARMS` (CPARMS) consumes both matrices in the same ALS solve. The liked
 term pulls scores toward positive rule confidence with `gamma_like`; the
 disliked term pulls them toward negative rule confidence with
 `gamma_dislike`. When both signals contain the same user-item pair, both loss
@@ -123,9 +123,9 @@ LD implementation can test liked-only, disliked-only, and no-signal settings
 without maintaining separate model classes.
 The `_net_signal()` helper is used only to log the density of
 `S_liked - S_disliked` in the runners; it is not the matrix optimized by
-`CPARMS_LD.fit()`.
+`CPARMS.fit()`.
 
-In CPARMS-LD, shared item factors are learned from users with
+In CPARMS, shared item factors are learned from users with
 observed fit-window ratings. Evaluation-only users are folded in from their
 learned CPARMS signals while item factors remain fixed.
 
@@ -181,16 +181,16 @@ inside a partition to their maximum rating.
 | Selection metric | Validation overall `NDCG@10` |
 | User activity groups | `interaction_0`, `interaction_1`, `interaction_2`, `interaction_3_plus` |
 | Dataset selection | Any subset of the five prepared CSVs; enable entries in `SELECTED_DATASETS` |
-| Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`, `07 CPARMS-LD` |
+| Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`, `07 CPARMS` |
 | Output workbook | `results/final_results_<utc_timestamp>.xlsx` |
 | Output sheets | `results`, `seed_summary`, `best_hyperparameters`, `significance`, `dataset_eda` |
 | Floating-point dtype | `float32` for every model (`FLOAT_DTYPE` in `util/dtype_config.py`) |
 
 Every tuned model owns a complete search-space definition and a separate
-reproducible sampling stream. Standard-WMF, CoFactor, RME, and CPARMS-LD use
+reproducible sampling stream. Standard-WMF, CoFactor, RME, and CPARMS use
 the same candidate values for WMF-backbone fields
 that have the same meaning (`latent`, `lambda_rate`, `n_sweeps`, and
-`alpha`), but every model draws those fields independently. Within CPARMS-LD,
+`alpha`), but every model draws those fields independently. Within CPARMS,
 its one sampled rule configuration is reused by its internal liked and
 disliked generators. Its `gamma_like` and `gamma_dislike` weights are sampled
 independently. All model streams
@@ -225,7 +225,7 @@ evaluation cutoffs in the notebook's experiment-configuration cell.
 | WMF-family `lambda_rate` candidates | `0.0001`, `0.001`, `0.01`, `0.1`, `1` |
 | WMF-family `n_sweeps` candidates | `5`, `10`, `15`, `20`, `25` |
 | WMF-family `alpha` candidates | `1`, `5`, `10`, `20`, `40`, `80` |
-| CPARMS-LD `gamma_like`/`gamma_dislike` | `0`, `0.01`, `0.1`, `0.5`, `1`, `2`, `5` |
+| CPARMS `gamma_like`/`gamma_dislike` | `0`, `0.01`, `0.1`, `0.5`, `1`, `2`, `5` |
 | `normalize` | `row_max`, `log_row_max` |
 | `k_user` | `None`, `1`, `2`, `3`, `5` |
 | `K_item` | `None`, `1`, `2`, `3`, `5` |
@@ -265,7 +265,7 @@ can explore cross-combinations of rule coverage, confidence, and lift filtering.
 
 `experiments/significance.py` runs a paired t-test (`scipy.stats.ttest_rel`)
 on per-user NDCG@`SELECTION_K` between `SIGNIFICANCE_PRIMARY_MODEL` (currently
-`07 CPARMS-LD`) and every other model evaluated on the same dataset, for the
+`07 CPARMS`) and every other model evaluated on the same dataset, for the
 overall population and for each user activity group. `ranking_metrics_at_k(...,
 return_per_user=True)` is what makes this possible: it returns each evaluated
 user's own NDCG vector alongside the usual aggregated means, so two models'
@@ -356,7 +356,7 @@ min_lift
 normalize
 ```
 
-Within one CPARMS-LD configuration, its sampled
+Within one CPARMS configuration, its sampled
 `k_user`/`K_item`/`min_support`/`min_confidence`/`min_lift`/`normalize` values
 are reused by its internal liked and disliked signal generators -- see
 [Current Experiment Configuration](#current-experiment-configuration).
@@ -369,7 +369,7 @@ Parameter columns depend on the enabled models; unused model-specific parameter
 columns are blank. Because ItemPop is not tuned, its rows carry no hyperparameter
 values and its `validation_selection_score` is `NaN`. `s_mat_runtime` is `0` for
 ItemPop, Standard-WMF, NeuMF, and LightGCN. It records explicit SPPMI
-construction for CoFactor and rule-signal construction for CPARMS-LD.
+construction for CoFactor and rule-signal construction for CPARMS.
 RME builds its three SPPMI matrices inside `fit()`, so that work is included in
 `model_runtime`. All runtime values are recorded in minutes.
 
@@ -548,7 +548,7 @@ cparms-wmf-recsys/
 |   |   |-- neumf.py             # Neural matrix factorization
 |   |   `-- lightgcn.py          # Graph collaborative filtering
 |   `-- proposed/
-|       `-- cparms_all.py        # CPARMS-LD: jointly regularized WMF
+|       `-- cparms.py        # CPARMS: jointly regularized WMF
 |-- paper/                       # Thesis, paper, presentation, and references
 |-- results/                     # Generated Excel experiment outputs
 |-- util/

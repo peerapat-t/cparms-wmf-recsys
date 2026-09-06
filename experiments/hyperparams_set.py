@@ -74,9 +74,9 @@ PARAM_SPACE_LIGHTGCN = {
 }
 
 
-# CPARMS-LD-only search space. Its single sampled rule-mining configuration
+# CPARMS-only search space. Its single sampled rule-mining configuration
 # is reused by its liked and disliked signal generators.
-PARAM_SPACE_CPARMS_LD = {
+PARAM_SPACE_CPARMS = {
     "latent": (10, 20, 40, 60, 80, 100),
     "lambda_rate": (0.0001, 0.001, 0.01, 0.1, 1.0),
     "n_sweeps": (5, 10, 15, 20, 25),
@@ -98,7 +98,7 @@ MODEL_PARAM_SPACES = {
     "rme": PARAM_SPACE_RME,
     "neumf": PARAM_SPACE_NEUMF,
     "lightgcn": PARAM_SPACE_LIGHTGCN,
-    "cparms_ld": PARAM_SPACE_CPARMS_LD,
+    "cparms": PARAM_SPACE_CPARMS,
 }
 
 
