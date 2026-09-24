@@ -25,16 +25,13 @@ def _as_csr(matrix, name: str) -> sparse.csr_matrix:
 
 
 def build_user_activity_groups(train_mat):
-    """Partition users by their number of training interactions."""
+    """Partition users with training interactions by their history size."""
     train_mat = _as_csr(train_mat, "train_mat")
 
 
     train_counts = np.asarray(
         train_mat.getnnz(axis=1)
     ).reshape(-1)
-    interaction_0 = np.flatnonzero(
-        train_counts == 0
-    ).astype(np.int64, copy=False)
     interaction_1 = np.flatnonzero(
         train_counts == 1
     ).astype(np.int64, copy=False)
@@ -46,7 +43,6 @@ def build_user_activity_groups(train_mat):
     ).astype(np.int64, copy=False)
 
     return {
-        "interaction_0": interaction_0,
         "interaction_1": interaction_1,
         "interaction_2": interaction_2,
         "interaction_3_plus": interaction_3_plus,

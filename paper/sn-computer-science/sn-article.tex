@@ -137,13 +137,12 @@ CPARMS-WMF: Clustering and Pairwise Association Rule Mining Signal for WMF with 
 %%==================================%%
 
 \abstract{
-Weighted matrix factorization (WMF) struggles when interactions are sparse and side information is not always available. We investigate whether patterns derived only from the interaction matrix can improve personalized Top-$K$ recommendation for users with short positive histories.
+Weighted matrix factorization (WMF) struggles when interactions are sparse and side information is not always available. We investigate whether patterns derived only from the interaction matrix can improve personalized Top-$K$ recommendation for users with short histories.
 
-We propose CPARMS-WMF, a feature-free framework that clusters users and items from positive feedback, mines single-antecedent rules over user-cluster, liked-item-cluster, and item-level tokens, and incorporates the resulting user--item scores into WMF. We evaluate it on five Amazon datasets using a global temporal split and five random seeds against MostPop, Standard-WMF, and CoFactor.
+We propose CPARMS-WMF, a feature-free framework that clusters users and items, mines single-antecedent rules separately from liked and disliked feedback, and adds the resulting user--item scores to WMF as positive and negative targets. We evaluate it on five Amazon datasets using a global temporal split and five random seeds against ItemPop, Standard-WMF, CoFactor, RME, NeuMF, and LightGCN.
 
-CPARMS-WMF wins $73/75$ dataset--seed baseline comparisons: $25/25$ against MostPop and $24/25$ against each WMF baseline. Its mean normalized discounted cumulative gain at cutoff 10 (NDCG@10) is highest on all five datasets. For one-interaction users, it wins $21/25$ comparisons against Standard-WMF, $19/25$ against CoFactor, and $13/25$ against MostPop.
-
-CPARMS-WMF improves ranking over both WMF baselines overall and in most comparisons for one-interaction users, but popularity remains competitive.
+% TODO: results paragraph and conclusion sentence, to be written after the
+% re-run without users who have no fit-window interactions.
 }
 
 \keywords{ Recommender systems, Sparse implicit feedback, Weighted matrix factorization, Clustering, Association rule mining }
@@ -167,26 +166,26 @@ Collaborative filtering, especially matrix factorization (MF) \cite{koren2009mf}
 
 One common solution to user sparsity is to add side information such as user profiles, demographic attributes, item descriptions, or cross-domain knowledge \cite{nguyen2013contentBoostedMF,fernandezTobias2019crossDomainColdStart,parthasarathy2023hybrid}. Side information can improve accuracy, but it is not always available. This gap motivates feature-free methods, which do not require user attributes or item metadata.
 
-The interaction matrix contains patterns beyond the history of any single user or item. Clustering can reveal group-level preferences \cite{mirbakhsh2016leveraging}, and item co-occurrence can strengthen latent-factor learning \cite{liang2016cofactor}. Association rule mining can reveal directional relationships: previous work has combined item clustering with association rule mining to reduce sparsity \cite{najafabadi2017clusteringARM}, and CFCAI applies cluster-level rule mining to cold-start recommendation \cite{khaledian2025cfcai}.
+The interaction matrix contains patterns beyond the history of any single user or item. Clustering can reveal group-level preferences \cite{mirbakhsh2016leveraging}. Association rule mining can reveal directional relationships, and previous work has combined item clustering with association rule mining to reduce sparsity \cite{najafabadi2017clusteringARM}. Co-occurrence is another source of information. CoFactor adds an item--item co-occurrence term to WMF \cite{liang2016cofactor}. RME extends this idea with three co-occurrence terms: items that users often like together, items that users often dislike together, and users who like the same items \cite{tran2018rme}.
 
-These studies motivate integrating clustering, association rule mining, and weighted matrix factorization in a single model. Clustering captures shared preference structure, association rules identify directional relationships, and WMF uses this information for personalized ranking. CPARMS-WMF combines these signals within a single objective.
+These studies use clustering, association rules, or co-occurrence, but none of them combines clustering, association rule mining, and weighted matrix factorization in a single model. Clustering captures shared preference structure, association rules identify directional relationships, and WMF uses this information for personalized ranking. CPARMS-WMF combines these signals within a single objective and, like RME, uses both liked and disliked feedback.
 
-We propose \textbf{CPARMS-WMF}, a feature-free framework for personalized recommendation under sparse implicit feedback. Its \textbf{Clustering and Pairwise Association Rule Mining Signal (CPARMS)} is derived only from the user--item interaction matrix. CPARMS clusters users and items by positive interaction patterns, mines single-antecedent rules from user-cluster, liked-item-cluster, and item-level tokens, and converts those rules into a user--item signal. An additional CPARMS term incorporates this signal into the ALS objective.
+We propose \textbf{CPARMS-WMF}, a feature-free framework for personalized recommendation under sparse implicit feedback. Its \textbf{Clustering and Pairwise Association Rule Mining Signal (CPARMS)} is derived only from the user--item interaction matrix. CPARMS builds two signals, one from liked feedback and one from disliked feedback. For each signal, it clusters users and items, mines single-antecedent rules from user-cluster, item-cluster, and item-level tokens, and converts those rules into a user--item signal. Two CPARMS terms add these signals to the ALS objective: the liked signal raises predicted scores, and the disliked signal lowers them, each with its own weight.
 
-We evaluate only users and items observed in the fit window. Users and items that appear only in the evaluation window are excluded from training and the candidate set, and their evaluation events are not scored. Among the remaining users, we include only those with at least one positive interaction in the fit window and at least one positive target in the evaluation window. Results are reported overall and separately for users with one, two, and three or more positive interactions.
+We evaluate users with at least one interaction in the fit window and at least one positive target in the evaluation window. Users and items that appear only in the evaluation window are excluded from training and the candidate set, and their evaluation events are not scored. Results are reported overall and separately for users with one, two, and three or more interactions in the fit window.
 
-CPARMS-WMF is compared with three feature-free baselines: a non-personalized popularity baseline (MostPop), Standard-WMF, and CoFactor.
+CPARMS-WMF is compared with six feature-free baselines in three groups: a non-personalized popularity baseline (ItemPop); three models that share the WMF backbone, namely Standard-WMF \cite{hu2008implicit}, CoFactor \cite{liang2016cofactor}, and RME \cite{tran2018rme}; and two models with different backbones, namely NeuMF \cite{he2017ncf} and LightGCN \cite{he2020lightgcn}.
 
 The main contributions are:
 
 \begin{enumerate}
 \item CPARMS-WMF is introduced as a feature-free method for recommendation under sparse implicit feedback that does not require user attributes or item metadata.
 
-\item CPARMS combines user and item clustering with pairwise association rule mining. It mines user-cluster, liked-item-cluster, and item-level rules from the transactions.
+\item CPARMS combines user and item clustering with pairwise association rule mining. It builds separate signals from liked and disliked feedback, and each signal uses user-cluster, item-cluster, and item-level rules from the transactions.
 
-\item CPARMS is integrated into WMF through an additional CPARMS term optimized by alternating least squares.
+\item CPARMS is integrated into WMF through two additional terms optimized by alternating least squares.
 
-\item CPARMS-WMF is evaluated on five Amazon domains using five random seeds. NDCG@10 is the primary metric, with NDCG@20, NDCG@50, NDCG@100, and NDCG@200 reported as secondary measures. The analysis covers mean performance and pairwise dataset--seed comparisons against all three baselines, both overall and for users with one, two, and three or more positive interactions. It also identifies where CPARMS-WMF improves over the WMF baselines and where popularity remains competitive.
+\item CPARMS-WMF is evaluated on five Amazon domains using five random seeds against six baselines. NDCG@10 is the primary metric, with NDCG@20, NDCG@50, NDCG@100, and NDCG@200 reported as secondary measures. The analysis covers mean performance and per-user paired t-tests, both overall and for users with one, two, and three or more interactions.
 \end{enumerate}
 
 %%==================================%%
@@ -195,7 +194,11 @@ The main contributions are:
 
 \section{Related Work}\label{sec2}
 
-We first review matrix factorization for implicit feedback and then consider feature-free methods that extract additional structure from the interaction matrix.
+We first review the popularity baseline and matrix factorization for implicit feedback. We then review methods that add side information, methods that extract additional signals from the interaction matrix, and neural and graph-based recommenders.
+
+\subsection{Non-personalized Recommendation}
+
+Ranking candidate items by global popularity, identically for every user, is the standard non-personalized reference point in recommender evaluation \cite{aggarwal2016recommender,zangerle2022fevr}. We call this baseline ItemPop. Because it does not use individual user histories, a personalized model that cannot outperform it has not demonstrated an accuracy benefit from personalization under this evaluation protocol. Popularity remains a strong Top-$K$ baseline: prior work shows that a naive TopPop method can rival sophisticated personalized algorithms and that highly popular items can skew Top-$K$ accuracy \cite{cremonesi2010performance}.
 
 \subsection{Matrix Factorization and Weighted Matrix Factorization}
 
@@ -205,10 +208,6 @@ Weighted matrix factorization (WMF) extends MF to implicit-feedback data by mode
 
 Both methods remain sensitive to sparsity: when observed interactions are limited, estimates become unreliable, and Top-$K$ ranking quality drops \cite{roy2022systematic}. This problem motivates additional signals derived from interactions.
 
-\subsection{Non-personalized Recommendation}
-
-Ranking candidate items by global popularity, identically for every user, is the standard non-personalized reference point in recommender evaluation \cite{aggarwal2016recommender,zangerle2022fevr}. Because this baseline does not use individual user histories, a personalized model that cannot outperform it has not demonstrated an accuracy benefit from personalization under this evaluation protocol. Popularity remains a strong Top-$N$ baseline: prior work shows that a naive TopPop method can rival sophisticated personalized algorithms and that highly popular items can skew Top-$N$ accuracy \cite{cremonesi2010performance}. Section~\ref{sec5} shows that it outperforms Standard-WMF on two of our five datasets.
-
 \subsection{Hybrid Matrix Factorization with Side Information}
 
 A common approach to reducing sparsity is to use side information with collaborative filtering. Content-boosted matrix factorization adds item attributes directly to the factorization, improving predictive accuracy and making recommendations easier to interpret \cite{nguyen2013contentBoostedMF}.
@@ -217,7 +216,7 @@ Cross-domain matrix factorization transfers information from related domains by 
 
 \subsection{Hybrid Matrix Factorization without Side Information}
 
-Interaction-derived methods draw additional signals from user--item data without requiring external attributes. Clustering-based approaches identify preference structures shared by users or items \cite{mirbakhsh2016leveraging}, while association-rule approaches mine directional item relationships from transaction data. Some studies combine the two techniques or connect one of them to matrix factorization. For example, one approach reduces the dimensionality of the item space through clustering and then applies association rule mining to implicit interactions \cite{najafabadi2017clusteringARM}. CFCAI mines rules between clusters to support cold-start recommendation, while also using demographic and profile information \cite{khaledian2025cfcai}. CoFactor instead adds an item--item co-occurrence term to the factorization objective, supplying information for items with few observed interactions \cite{liang2016cofactor}. To our knowledge, none of the studies reviewed above integrates clustering, association rule mining, and weighted matrix factorization within one model.
+Interaction-derived methods draw additional signals from user--item data without requiring external attributes. Clustering-based approaches identify preference structures shared by users or items \cite{mirbakhsh2016leveraging}, while association-rule approaches mine directional item relationships from transaction data. Some studies combine the two techniques or connect one of them to matrix factorization. For example, one approach reduces the dimensionality of the item space through clustering and then applies association rule mining to implicit interactions \cite{najafabadi2017clusteringARM}. Another line of work adds co-occurrence terms to the factorization objective. CoFactor adds an item--item co-occurrence term, supplying information for items with few observed interactions \cite{liang2016cofactor}. RME extends CoFactor with a co-occurrence term for disliked items and a co-occurrence term for users \cite{tran2018rme}. To our knowledge, none of the studies reviewed above integrates clustering, association rule mining, and weighted matrix factorization within one model.
 
 CoFactor is a relevant weighted matrix factorization baseline because it links implicit-feedback WMF with an item--item co-occurrence signal derived from the same interaction matrix \cite{liang2016cofactor}. CoFactor augments Standard-WMF with an item--item shifted positive pointwise mutual information (SPPMI) term. Using the notation of this paper, a CoFactor-style objective is
 \begin{equation}
@@ -235,7 +234,7 @@ c_{ui}
 \left(
 m_{ij}
 -\mathbf{q}_i^{\top}\mathbf{z}_j
--b_i-d_j
+-b_i-d_j-g
 \right)^2 \\
 &+
 \lambda
@@ -248,7 +247,7 @@ m_{ij}
 \end{aligned}
 \label{eq:cofactor_objective}
 \end{equation}
-Here $\pi_{ui}$ is the binary implicit preference, $c_{ui}$ is its WMF confidence weight, $\mathbf{p}_u$ and $\mathbf{q}_i$ are user and item factors, $m_{ij}$ is the SPPMI value for item $i$ and context item $j$, $\mathcal{M}$ indexes nonzero SPPMI entries, $\mathbf{z}_j$ is a context factor, $b_i$ and $d_j$ are item-side and context-side biases, $\gamma_{\mathrm{co}}$ controls the co-occurrence-term weight, and $\lambda_{\mathrm{ctx}}$ regularizes the context factors. The shared item factor $\mathbf{q}_i$ connects the WMF term to the SPPMI term. We compute the SPPMI entries from item co-occurrence counts $c_{ij}$, where $c_{ij}$ is the number of users who positively interacted with both items $i$ and $j$, and we set the diagonal to zero:
+Here $\pi_{ui}$ is the binary implicit preference, $c_{ui}$ is its WMF confidence weight, $\mathbf{p}_u$ and $\mathbf{q}_i$ are user and item factors, $m_{ij}$ is the SPPMI value for item $i$ and context item $j$, $\mathcal{M}$ indexes nonzero SPPMI entries, $\mathbf{z}_j$ is a context factor, $b_i$ and $d_j$ are item-side and context-side biases, $g$ is a global intercept, $\gamma_{\mathrm{co}}$ controls the co-occurrence-term weight, and $\lambda_{\mathrm{ctx}}$ regularizes the context factors. The shared item factor $\mathbf{q}_i$ connects the WMF term to the SPPMI term. We compute the SPPMI entries from item co-occurrence counts $c_{ij}$, where $c_{ij}$ is the number of users who positively interacted with both items $i$ and $j$, and we set the diagonal to zero:
 \begin{equation}
 \operatorname{SPPMI}_{ij}
 =
@@ -263,15 +262,71 @@ Here $\pi_{ui}$ is the binary implicit preference, $c_{ui}$ is its WMF confidenc
 \end{equation}
 where $N$ is the total co-occurrence count over nonzero entries, $f_i$ and $f_j$ are the marginal co-occurrence counts of items $i$ and $j$, and $k$ is the number of negative samples, whose logarithm shifts the pointwise mutual information. CoFactor therefore adds a signal derived from interactions, but this signal encodes item-level co-occurrence rather than group-level user preference patterns.
 
-Equation~\eqref{eq:cofactor_objective} keeps the co-occurrence term weighted and the WMF term at unit scale. The original formulation instead applies a relative scale $\ell$ to the WMF term and its user and item regularizers. Dividing the objective by $\ell$ gives Eq.~\eqref{eq:cofactor_objective} with $\gamma_{\mathrm{co}}=1/\ell$ and $\lambda_{\mathrm{ctx}}=\gamma_{\mathrm{co}}\lambda$. Our implementation and hyperparameter search keep this relationship: we sample $\ell$ and derive $\gamma_{\mathrm{co}}$ and $\lambda_{\mathrm{ctx}}$ from it (Section~\ref{sec4_hyperparameter}).
+Equation~\eqref{eq:cofactor_objective} keeps the co-occurrence term weighted and the WMF term at unit scale. The original formulation instead applies a relative scale $\ell$ to the WMF term and its user and item regularizers. Dividing the objective by $\ell$ gives Eq.~\eqref{eq:cofactor_objective} with $\gamma_{\mathrm{co}}=1/\ell$. Our hyperparameter search keeps this relationship: we sample $\ell$ and set $\gamma_{\mathrm{co}}=1/\ell$, and we sample $\lambda_{\mathrm{ctx}}$ separately (Section~\ref{sec4_hyperparameter}).
+
+RME follows the same idea but uses three SPPMI terms instead of one \cite{tran2018rme}. The first is the CoFactor term over items that users like together. The second is a term over items that users dislike together, computed in the same way from disliked feedback. The third is a user--user term over users who like the same items. Using the same notation, the RME objective is
+\begin{equation}
+\begin{aligned}
+\mathcal{L}_{\mathrm{RME}}
+=&
+\sum_{u\in\mathcal{U}}\sum_{i\in\mathcal{I}}
+c_{ui}
+\left(
+\pi_{ui}-\mathbf{p}_u^{\top}\mathbf{q}_i
+\right)^2 \\
+&+
+\gamma^{+}
+\sum_{(i,j)\in\mathcal{M}^{+}}
+\left(
+m^{+}_{ij}
+-\mathbf{q}_i^{\top}\mathbf{z}^{+}_j
+-b^{+}_i-d^{+}_j-g^{+}
+\right)^2 \\
+&+
+\gamma^{-}
+\sum_{(i,j)\in\mathcal{M}^{-}}
+\left(
+m^{-}_{ij}
+-\mathbf{q}_i^{\top}\mathbf{z}^{-}_j
+-b^{-}_i-d^{-}_j-g^{-}
+\right)^2 \\
+&+
+\gamma^{U}
+\sum_{(u,v)\in\mathcal{N}}
+\left(
+n_{uv}
+-\mathbf{p}_u^{\top}\mathbf{w}_v
+-e_u-h_v-g^{U}
+\right)^2 \\
+&+
+\lambda
+\left(
+\lVert\mathbf{P}\rVert_F^2+
+\lVert\mathbf{Q}\rVert_F^2
+\right)
++
+\lambda_{\mathrm{ctx}}
+\left(
+\lVert\mathbf{Z}^{+}\rVert_F^2+
+\lVert\mathbf{Z}^{-}\rVert_F^2+
+\lVert\mathbf{W}\rVert_F^2
+\right).
+\end{aligned}
+\label{eq:rme_objective}
+\end{equation}
+Here $m^{+}_{ij}$ and $m^{-}_{ij}$ are the SPPMI values of Eq.~\eqref{eq:sppmi} computed from liked and disliked feedback, $n_{uv}$ is the SPPMI value for users $u$ and $v$ computed from liked feedback, $\mathbf{z}^{+}_j$, $\mathbf{z}^{-}_j$, and $\mathbf{w}_v$ are context factors, and $b$, $d$, $e$, $h$, and $g$ are the biases and global intercepts of each term. The item factor $\mathbf{q}_i$ is shared by the WMF term and both item terms, and the user factor $\mathbf{p}_u$ is shared by the WMF term and the user term. RME therefore uses disliked feedback, but, like CoFactor, it works with co-occurrence between single items or single users rather than group-level patterns.
+
+\subsection{Neural and Graph-Based Recommendation}
+
+Other feature-free models replace the WMF backbone. NeuMF combines a generalized matrix factorization branch and a multilayer perceptron branch, so it can learn non-linear user--item interactions, and it is trained with sampled negative items \cite{he2017ncf}. LightGCN learns user and item embeddings by propagating them over the user--item interaction graph with simple weighted sums, and it is trained with a pairwise ranking loss \cite{he2020lightgcn}. Both models learn only from the interaction matrix, but they are trained by gradient descent instead of closed-form ALS updates, and they do not add an explicit signal for users with short histories.
 
 \subsection{How the Proposed Method Differs}
 
-The feature-free methods reviewed above use one or two of clustering, association rule mining, and weighted matrix factorization. CPARMS-WMF combines all three in one framework: clustering provides group-level preference structure shared across the members of each user or item cluster, pairwise association rules provide directional confidence-weighted information, and WMF provides personalized latent-factor ranking. CoFactor adds SPPMI item co-occurrence to matrix factorization, which makes it a suitable baseline for CPARMS-WMF because both use extra information from the interaction matrix. The main difference is that CoFactor regularizes shared item embeddings with item-level co-occurrence, while CPARMS builds a user--item signal from item--item, user-cluster--item, and liked-item-cluster--item relations.
+The feature-free methods reviewed above use one or two of clustering, association rule mining, and weighted matrix factorization. CPARMS-WMF combines all three in one framework: clustering provides group-level preference structure shared across the members of each user or item cluster, pairwise association rules provide directional confidence-weighted information, and WMF provides personalized latent-factor ranking. CoFactor and RME are the closest baselines because they also add terms derived from the interaction matrix to the same WMF objective. The main difference is the type of information. CoFactor and RME regularize item and user factors with co-occurrence between single items or single users, while CPARMS builds user--item targets from item--item, user-cluster--item, and item-cluster--item rules. Like RME, CPARMS uses disliked feedback, but it turns this feedback into a separate signal that lowers the scores of candidate items instead of an item co-occurrence term.
 
-CPARMS uses three token families: user-cluster, liked-item-cluster, and item-level tokens. User-cluster tokens provide a generic signal shared by users in the same cluster, while the other two provide personalized signals based on each user's positive history.
+CPARMS uses three token families in each signal: user-cluster, item-cluster, and item-level tokens. User-cluster tokens provide a generic signal shared by users in the same cluster, while the other two provide personalized signals based on each user's own history.
 
-This comparison raises two questions. First, can CPARMS-WMF improve personalized ranking under sparse implicit feedback, beating Standard-WMF, CoFactor, and the non-personalized popularity baseline? Second, does this improvement remain for users with extremely short histories, including when compared with the popularity baseline? The results in Section~\ref{sec5} support the first claim but only partly support the second.
+This comparison raises two questions. First, can CPARMS-WMF improve personalized ranking under sparse implicit feedback over the WMF-based baselines, the neural and graph baselines, and the popularity baseline? Second, does this improvement remain for users with very short histories?
 
 
 %%==================================%%
@@ -280,43 +335,45 @@ This comparison raises two questions. First, can CPARMS-WMF improve personalized
 
 \section{Proposed Method}\label{sec3}
 
-\textbf{CPARMS-WMF} is designed to improve Top-$K$ recommendation under sparse implicit feedback by deriving its CPARMS signal through clustering and pairwise association rule mining on the user--item interaction matrix.
+\textbf{CPARMS-WMF} is designed to improve Top-$K$ recommendation under sparse implicit feedback. It derives two CPARMS signals, one from liked feedback and one from disliked feedback, through clustering and pairwise association rule mining on the user--item interaction matrix.
 
-Three main components make up the framework: (i) interaction-based clustering of users and items, followed by pairwise association rule mining; (ii) construction of a sparse user--item recommendation signal from the rules; and (iii) integration of that signal into a weighted matrix factorization objective optimized by alternating least squares.
+Three main components make up the framework: (i) interaction-based clustering of users and items, followed by pairwise association rule mining, run once on the liked view and once on the disliked view; (ii) construction of a sparse user--item signal from the rules of each view; and (iii) integration of both signals into a weighted matrix factorization objective optimized by alternating least squares.
 
 \subsection{Notation and Feedback Views}
 
-Let $\mathcal{U}=\{1,\ldots,U\}$ and $\mathcal{I}=\{1,\ldots,I\}$ be the user and item index sets, and let $\mathbf{Y}=[y_{ui}] \in \mathbb{R}_{\ge 0}^{U \times I}$ be the interaction matrix of the fit window. From $\mathbf{Y}$ the pipeline derives two binary views and keeps them strictly separate:
+Let $\mathcal{U}=\{1,\ldots,U\}$ and $\mathcal{I}=\{1,\ldots,I\}$ be the user and item index sets, and let $\mathbf{Y}=[y_{ui}] \in \mathbb{R}_{\ge 0}^{U \times I}$ be the rating matrix of the fit window, with $y_{ui}=0$ when user $u$ has not rated item $i$. From $\mathbf{Y}$ the pipeline derives three binary views and keeps them strictly separate:
 \begin{equation}
 \underbrace{b_{ui} = \mathbb{I}\!\left[\, y_{ui} > 0 \,\right]}_{\textstyle \mathbf{B}\;(\text{seen})},
 \qquad
 \underbrace{\ell_{ui} = \mathbb{I}\!\left[\, y_{ui} > \theta \,\right]}_{\textstyle \mathbf{L}\;(\text{liked})},
-\qquad \theta=3.
+\qquad
+\underbrace{\delta_{ui} = \mathbb{I}\!\left[\, 0 < y_{ui} < \theta \,\right]}_{\textstyle \mathbf{D}\;(\text{disliked})},
+\qquad \theta=4.
 \label{eq:binary}
 \end{equation}
-$\mathbf{L}$ is the positive feedback (``liked'') view: at $\theta=3$, integer ratings of four or higher count as positive. This threshold follows the MovieLens preprocessing used in CoFactor~\cite{liang2016cofactor}. We additionally retain $\mathbf{B}$ as the ``seen'' view, recording every observed rating at any level so that all previously rated items can be masked at ranking time.
+With integer ratings from $1$ to $5$, a rating of $5$ counts as liked, ratings of $1$ to $3$ count as disliked, and a rating of $4$ counts as neither. We use $\theta=4$ because Amazon ratings are strongly skewed toward high values. With the more common threshold $\theta=3$, the ratio of liked to disliked ratings in our datasets ranges from $9.9{:}1$ to $40.1{:}1$, which leaves too few disliked ratings for rule mining. With $\theta=4$, the ratio ranges from $2.8{:}1$ to $12.3{:}1$. A rating of $4$ still counts as seen in $\mathbf{B}$.
 
-All learned inputs are derived from $\mathbf{L}$: the cluster assignments, transaction tokens, association rules, SPPMI matrix, and WMF preference target. The matrix $\mathbf{B}$ is used only to mask candidates. An item is therefore treated as seen after any rating, even one below the like threshold, and is not recommended again. For user $u$, let $\Omega_u^{+}=\{i \mid \ell_{ui}=1\}$ denote the positive history, $\Omega_u=\{i \mid b_{ui}=1\} \supseteq \Omega_u^{+}$ the seen set, and $n_u=|\Omega_u^{+}|$.
+The liked view $\mathbf{L}$ gives the WMF preference target, the relevance labels for evaluation, and the liked CPARMS signal. The disliked view $\mathbf{D}$ gives only the disliked CPARMS signal. The seen view $\mathbf{B}$ is used to mask candidates: an item is treated as seen after any rating and is not recommended again. For user $u$, let $\Omega_u^{+}=\{i \mid \ell_{ui}=1\}$ denote the liked history, $\Omega_u^{-}=\{i \mid \delta_{ui}=1\}$ the disliked history, $\Omega_u=\{i \mid b_{ui}=1\} \supseteq \Omega_u^{+}\cup\Omega_u^{-}$ the seen set, and $n_u=|\Omega_u|$ the number of fit-window interactions.
 
 
 \subsection{CPARMS: Clustering and Pairwise Association Rule Construction}
 
-Previous studies show that clustering and association rule mining can improve collaborative filtering on sparse data~\cite{mirbakhsh2016leveraging,najafabadi2017clusteringARM}. CPARMS builds on these ideas to construct an additional sparse signal using only positive interactions.
+Previous studies show that clustering and association rule mining can improve collaborative filtering on sparse data~\cite{mirbakhsh2016leveraging,najafabadi2017clusteringARM}. CPARMS builds on these ideas to construct two additional sparse signals. The same procedure runs twice, once on the liked view and once on the disliked view, with the same hyperparameters. We describe it for a history view $\mathbf{H}\in\{\mathbf{L},\mathbf{D}\}$ and use the superscripts $+$ and $-$ for the liked and disliked results.
 
-We cluster users and items separately with K-means~\cite{macqueen1967kmeans} on the binary positive feedback matrix. Each fit uses K-means++ initialization, $10$ restarts, and the experiment seed. K-means is fitted only to active rows, which contain at least one positive interaction, and the fitted model then assigns every row---including an all-zero row---to its nearest cluster. Excluding all-zero rows from fitting prevents identical inactive rows from forming an uninformative cluster. User clustering operates on the rows of $\mathbf{L}$ and produces $K_U$ clusters; the one-hot matrix $\mathbf{U} \in \{0,1\}^{U \times K_U}$ records each user's assignment. Item clustering operates on the rows of $\mathbf{L}^{\top}$ and produces the one-hot assignment matrix $\mathbf{G} \in \{0,1\}^{I \times K_I}$. We then construct a binary liked-item-cluster matrix that records whether a user's positive history contains any item from each cluster:
+We cluster users and items separately with K-means~\cite{macqueen1967kmeans} on $\mathbf{H}$. Each fit uses K-means++ initialization, $10$ restarts, and the experiment seed. K-means is fitted only to active rows, which contain at least one entry in $\mathbf{H}$, and the fitted model then assigns every row---including an all-zero row---to its nearest cluster. Excluding all-zero rows from fitting prevents identical inactive rows from forming an uninformative cluster. Because every row is assigned, every user belongs to one user cluster. User clustering operates on the rows of $\mathbf{H}$ and produces $K_U$ clusters; the one-hot matrix $\mathbf{U} \in \{0,1\}^{U \times K_U}$ records each user's assignment. Item clustering operates on the rows of $\mathbf{H}^{\top}$ and produces the one-hot assignment matrix $\mathbf{G} \in \{0,1\}^{I \times K_I}$. We then construct a binary item-cluster matrix that records whether a user's history in $\mathbf{H}$ contains any item from each cluster:
 \begin{equation}
-\mathbf{E} = \mathbb{I}\!\left[\, \mathbf{L}\mathbf{G} > 0 \,\right] \in \{0,1\}^{U \times K_I}.
+\mathbf{E} = \mathbb{I}\!\left[\, \mathbf{H}\mathbf{G} > 0 \,\right] \in \{0,1\}^{U \times K_I}.
 \label{eq:presence}
 \end{equation}
-When $K_U=1$, all users share the same user-cluster token, which acts as a dataset-wide popularity signal. Validation selects this setting for some datasets (Section~\ref{sec5}).
+Either clustering step can be disabled, which removes the corresponding token family. When $K_U=1$, all users share the same user-cluster token, which acts as a dataset-wide popularity signal.
 
-For each user, we stack three token families (user-cluster tokens, liked-item-cluster tokens, and item-level tokens) into a single transaction matrix:
+For each user, we stack three token families (item-level tokens, user-cluster tokens, and item-cluster tokens) into a single transaction matrix:
 \begin{equation}
-\mathbf{T} = \big[\, \mathbf{L} \;\big|\; \mathbf{U} \;\big|\; \mathbf{E} \,\big]
+\mathbf{T} = \big[\, \mathbf{H} \;\big|\; \mathbf{U} \;\big|\; \mathbf{E} \,\big]
 \in \{0,1\}^{U \times M}, \qquad M = I + K_U + K_I .
 \label{eq:tokens}
 \end{equation}
-Let $\mathcal{A}$ index all $M$ tokens, and let $\mathcal{R}$ be the item-level tokens, which are the only valid consequents. We use user-cluster and liked-item-cluster tokens only as antecedents, so every rule has an individual item as its consequent.
+Let $\mathcal{A}$ index all $M$ tokens, and let $\mathcal{R}$ be the item-level tokens, which are the only valid consequents. We use user-cluster and item-cluster tokens only as antecedents, so every rule has an individual item as its consequent.
 
 We mine single-antecedent directed rules from joint token counts. Given the pair-count matrix $\mathbf{C} = \mathbf{T}^{\top}\mathbf{T}$ and token frequency $n_t = \sum_{u} T_{ut}$, the metrics for a rule $a \rightarrow b$ are:
 \begin{equation}
@@ -325,9 +382,9 @@ We mine single-antecedent directed rules from joint token counts. Given the pair
 \mathrm{lift}(a \rightarrow b) = \frac{U \, C_{ab}}{n_a \, n_b}.
 \label{eq:metrics}
 \end{equation}
-Confidence is the conditional probability that a user linked to antecedent $a$ is also linked to consequent $b$, and therefore measures the rule's directional reliability. Lift compares the joint frequency with that expected under independence: $\mathrm{lift}>1$ indicates a positive association beyond chance, whereas $\mathrm{lift}\approx 1$ indicates a relationship already explained by the consequent's overall popularity. We consider only directional pairs with $a \neq b$ and $b \in \mathcal{R}$. A rule is selected when it meets the configured minimum support, confidence, and lift. All three thresholds are tuned on validation data (Section~\ref{sec4_hyperparameter}). The rule-selection indicator is
+Confidence is the conditional probability that a user linked to antecedent $a$ is also linked to consequent $b$, and therefore measures the rule's directional reliability. Lift compares the joint frequency with that expected under independence: $\mathrm{lift}>1$ indicates a positive association beyond chance, whereas $\mathrm{lift}\approx 1$ indicates a relationship already explained by the consequent's overall frequency. We consider only directional pairs with $a \neq b$ and $b \in \mathcal{R}$. A rule is selected when it meets the configured minimum support, confidence, and lift. All three thresholds are tuned on validation data (Section~\ref{sec4_hyperparameter}). The rule-selection indicator is
 \begin{equation}
-D_{ab} = \mathbb{I}\!\left[\,
+F_{ab} = \mathbb{I}\!\left[\,
 \mathrm{sup}(a \rightarrow b) \ge \sigma_{\min} \;\land\;
 \mathrm{conf}(a \rightarrow b) \ge \rho_{\min} \;\land\;
 \mathrm{lift}(a \rightarrow b) \ge \ell_{\min}
@@ -336,10 +393,10 @@ D_{ab} = \mathbb{I}\!\left[\,
 \end{equation}
 Each selected rule keeps its confidence as its weight:
 \begin{equation}
-W_{ab} = D_{ab}\,\mathrm{conf}(a \rightarrow b).
+W_{ab} = F_{ab}\,\mathrm{conf}(a \rightarrow b).
 \label{eq:rule_weight}
 \end{equation}
-Thus, retained rules carry weight in proportion to their directional reliability, while support and lift serve only as noise filters through Eq.~\eqref{eq:mask}. Collecting the retained rules produces $\mathbf{W} \in \mathbb{R}^{M \times I}$, which encodes the filtered relationships from antecedent tokens to individual-item consequents.
+Thus, retained rules carry weight in proportion to their directional reliability, while support and lift serve only as noise filters through Eq.~\eqref{eq:mask}. Collecting the retained rules produces $\mathbf{W} \in \mathbb{R}^{M \times I}$, which encodes the filtered relationships from antecedent tokens to individual-item consequents. On the liked view, a rule $a \rightarrow b$ means that users linked to $a$ often like item $b$; on the disliked view, it means that users linked to $a$ often dislike item $b$.
 
 \begin{figure}[t]
 \centering
@@ -356,13 +413,13 @@ Thus, retained rules carry weight in proportion to their directional reliability
     arrow/.style={-{Stealth[length=2.2mm]}, line width=0.45pt}
 ]
 \node[matrixstage] (s1) {\textbf{1. Input}\\User--item matrix $\mathbf{Y}$\\raw ratings};
-\node[transformstage, right=of s1] (s2) {\textbf{2. Feedback views}\\$\mathbf{L}=\mathbb{I}[y_{ui}>\theta]$ (liked)\\$\mathbf{B}=\mathbb{I}[y_{ui}>0]$ (seen)\\$\theta=3$; learning uses only $\mathbf{L}$};
-\node[clusterstage, right=of s2] (s3) {\textbf{3. K-means on $\mathbf{L}$}\\users: rows of $\mathbf{L}\rightarrow\mathbf{U}$\\items: rows of $\mathbf{L}^{\top}\rightarrow\mathbf{G}$\\$\mathbf{E}=\mathbb{I}[\mathbf{L}\mathbf{G}>0]$};
-\node[matrixstage, right=of s3] (s4) {\textbf{4. Token matrix}\\$\mathbf{T}=[\mathbf{L}\mid\mathbf{U}\mid\mathbf{E}]$\\$\mathbf{L}$: item-level token\\$\mathbf{U}$: user-cluster token\\$\mathbf{E}$: liked-item-cluster token};
+\node[transformstage, right=of s1] (s2) {\textbf{2. Feedback views}\\$\mathbf{L}=\mathbb{I}[y_{ui}>4]$ (liked)\\$\mathbf{D}=\mathbb{I}[0<y_{ui}<4]$ (disliked)\\$\mathbf{B}=\mathbb{I}[y_{ui}>0]$ (seen)\\run steps 3--8 for $\mathbf{H}\in\{\mathbf{L},\mathbf{D}\}$};
+\node[clusterstage, right=of s2] (s3) {\textbf{3. K-means on $\mathbf{H}$}\\users: rows of $\mathbf{H}\rightarrow\mathbf{U}$\\items: rows of $\mathbf{H}^{\top}\rightarrow\mathbf{G}$\\$\mathbf{E}=\mathbb{I}[\mathbf{H}\mathbf{G}>0]$};
+\node[matrixstage, right=of s3] (s4) {\textbf{4. Token matrix}\\$\mathbf{T}=[\mathbf{H}\mid\mathbf{U}\mid\mathbf{E}]$\\$\mathbf{H}$: item-level token\\$\mathbf{U}$: user-cluster token\\$\mathbf{E}$: item-cluster token};
 \node[rulestage, below=of s4] (s5) {\textbf{5. Pairwise rules}\\$\mathbf{C}=\mathbf{T}^{\top}\mathbf{T}$\\directed single-antecedent rules\\item consequents only\\noise filtering: support, confidence, lift};
-\node[rulestage, left=of s5] (s6) {\textbf{6. Rule scores}\\$W_{ab}=D_{ab}\,\mathrm{conf}(a\rightarrow b)$\\confidence of retained rules};
-\node[transformstage, left=of s6] (s7) {\textbf{7. Sum confidences, mask}\\$\tilde{\mathbf{S}}=\mathbf{T}\mathbf{W}$\\$\mathbf{L},\mathbf{E}$ personalized; $\mathbf{U}$ generic\\remove all seen items ($\mathbf{B}$)};
-\node[outputstage, left=of s7] (s8) {\textbf{8. Normalize}\\row max /\\log-damped row max\\$\mathbf{S}\in\mathbb{R}^{|\mathcal{U}|\times|\mathcal{I}|}$};
+\node[rulestage, left=of s5] (s6) {\textbf{6. Rule scores}\\$W_{ab}=F_{ab}\,\mathrm{conf}(a\rightarrow b)$\\confidence of retained rules};
+\node[transformstage, left=of s6] (s7) {\textbf{7. Sum confidences, mask}\\$\tilde{\mathbf{S}}=\mathbf{T}\mathbf{W}$\\$\mathbf{H},\mathbf{E}$ personalized; $\mathbf{U}$ generic\\remove all seen items ($\mathbf{B}$)};
+\node[outputstage, left=of s7] (s8) {\textbf{8. Normalize}\\row max /\\log-damped row max\\$\mathbf{S}^{+}$ from $\mathbf{L}$, $\mathbf{S}^{-}$ from $\mathbf{D}$};
 \draw[arrow] (s1) -- (s2);
 \draw[arrow] (s2) -- (s3);
 \draw[arrow] (s3) -- (s4);
@@ -373,15 +430,16 @@ Thus, retained rules carry weight in proportion to their directional reliability
 \end{tikzpicture}%
 }
 \caption{Overview of the CPARMS signal-generation pipeline, from the raw user--item
-interaction matrix~$\mathbf{Y}$ to the normalized user--item signal matrix~$\mathbf{S}$.
-All learning happens on the liked view~$\mathbf{L}$; the seen view~$\mathbf{B}$ enters only
-as the candidate mask in stage~7}
+interaction matrix~$\mathbf{Y}$ to the normalized liked and disliked signal matrices
+$\mathbf{S}^{+}$ and $\mathbf{S}^{-}$. Steps 3--8 run once on the liked view~$\mathbf{L}$ and
+once on the disliked view~$\mathbf{D}$; the seen view~$\mathbf{B}$ enters only as the candidate
+mask in step~7}
 \label{fig:cparms_pipeline}
 \end{figure}
 
 \subsection{CPARMS Signal Generation}
 
-Figure~\ref{fig:cparms_pipeline} summarizes the implemented pipeline. CPARMS produces two sources of information. Rules triggered by user-cluster tokens in $\mathbf{U}$ give a generic score shared by members of the same cluster. Rules triggered by liked-item-cluster tokens in $\mathbf{E}$ or item-level tokens in $\mathbf{L}$ give personalized scores because both token types depend on the user's own positive history.
+Figure~\ref{fig:cparms_pipeline} summarizes the implemented pipeline. Each view produces two sources of information. Rules triggered by user-cluster tokens in $\mathbf{U}$ give a generic score shared by members of the same cluster. Rules triggered by item-cluster tokens in $\mathbf{E}$ or item-level tokens in $\mathbf{H}$ give personalized scores because both token types depend on the user's own history in that view.
 
 To form the raw signal, CPARMS applies the rule scores in $\mathbf{W}$ to every token in a user's transaction row, summing, for each candidate item, the scores of all rules triggered by the user's active tokens:
 \begin{equation}
@@ -390,7 +448,7 @@ To form the raw signal, CPARMS applies the rule scores in $\mathbf{W}$ to every 
 \end{equation}
 Because the token families occupy separate column blocks of $\mathbf{T}$, this sum divides exactly into the two types of information. We define
 \begin{equation}
-\mathbf{T}^{(p)} = \big[\, \mathbf{L} \;\big|\; \mathbf{0}_{U\times K_U} \;\big|\; \mathbf{E} \,\big],
+\mathbf{T}^{(p)} = \big[\, \mathbf{H} \;\big|\; \mathbf{0}_{U\times K_U} \;\big|\; \mathbf{E} \,\big],
 \qquad
 \mathbf{T}^{(g)} = \big[\, \mathbf{0}_{U\times I} \;\big|\; \mathbf{U} \;\big|\; \mathbf{0}_{U\times K_I} \,\big].
 \end{equation}
@@ -401,11 +459,9 @@ The raw signal is the equal-weight sum of the personalized and generic signals:
 = \tilde{\mathbf{S}}^{(p)} + \tilde{\mathbf{S}}^{(g)} .
 \label{eq:signal_sum}
 \end{equation}
-There is no specific blending parameter; the way the two signals combine depends entirely on token activation. Every user activates one user-cluster token, so the generic signal gives a shared cluster-level score vector to each cluster member. In contrast, the number of active personalized antecedents grows with $n_u$, so the personalized signal becomes stronger as positive history grows.
+There is no specific blending parameter; the way the two signals combine depends entirely on token activation. Every user activates one user-cluster token, so the generic signal gives a shared cluster-level score vector to each cluster member. In contrast, the number of active personalized antecedents grows with the user's history in the view, so the personalized signal becomes stronger as that history grows. A user with no history in the view activates only the user-cluster token, so Eq.~\eqref{eq:signal_sum} gives this user only the generic signal of that view.
 
-Equation~\eqref{eq:signal_sum} shows that a user with $n_u=0$ would receive only the generic signal. We do not evaluate this case because users with no positive interactions are outside the evaluation population (Section~\ref{sec4_split}).
-
-After summing the confidence scores, we set the score of every seen item to zero using $\mathbf{B}$, so the signal applies only to unseen items. Since the seen set includes all positive items, none of them retains a signal score.
+After summing the confidence scores, we set the score of every seen item to zero using $\mathbf{B}$, so the signal applies only to unseen items. Since the seen set includes all liked and disliked items, none of them retains a signal score.
 
 The unseen signal is then normalized using one of two searched modes. Row-wise maximum scaling divides each user row by its own maximum. Log-transformed row-wise scaling first compresses heavy-tailed rule-score sums with $\log(1+\cdot)$ so that a single dominant item does not compress the remaining scores in the row toward zero. Let $\tilde{s}_{ui}$ be the unseen raw signal. The two modes are:
 \begin{equation}
@@ -414,11 +470,11 @@ s_{ui} = \frac{\tilde{s}_{ui}}{\max_{j}\tilde{s}_{uj}},
 s_{ui} = \frac{\log\!\big(1+\tilde{s}_{ui}\big)}{\max_{j}\log\!\big(1+\tilde{s}_{uj}\big)}.
 \label{eq:normalize}
 \end{equation}
-Empty rows remain zero, and $0 \le s_{ui} \le 1$ under either mode. This yields the sparse, non-negative CPARMS signal matrix $\mathbf{S} = [s_{ui}] \in \mathbb{R}_{\ge 0}^{U \times I}$. We write $\Psi_u = \{\, i \mid s_{ui} > 0 \,\}$ for each user's set of signal-supported items; by construction, $\Psi_u \cap \Omega_u = \varnothing$.
+Empty rows remain zero, and $0 \le s_{ui} \le 1$ under either mode. Running this procedure on $\mathbf{L}$ gives the liked signal $\mathbf{S}^{+} = [s^{+}_{ui}]$, and running it on $\mathbf{D}$ gives the disliked signal $\mathbf{S}^{-} = [s^{-}_{ui}]$. Both matrices are sparse and non-negative. We write $\Psi_u^{+} = \{\, i \mid s^{+}_{ui} > 0 \,\}$ and $\Psi_u^{-} = \{\, i \mid s^{-}_{ui} > 0 \,\}$ for each user's sets of signal-supported items; by construction, $\Psi_u^{+} \cap \Omega_u = \Psi_u^{-} \cap \Omega_u = \varnothing$. The two sets can overlap, because the same unseen item can be supported by both liked and disliked rules.
 
 \subsection{CPARMS-WMF: Signal-Regularized Weighted Matrix Factorization}
 
-CPARMS-WMF integrates the signal into a single matrix factorization objective. It adds a CPARMS term over signal-supported items to implicit-feedback WMF~\cite{hu2008implicit}, similar to the additional SPPMI term in CoFactor~\cite{liang2016cofactor}. We compute interaction scores as the inner product of latent factors:
+CPARMS-WMF integrates both signals into a single matrix factorization objective. It adds two CPARMS terms over signal-supported items to implicit-feedback WMF~\cite{hu2008implicit}, similar to the additional SPPMI terms in CoFactor~\cite{liang2016cofactor} and RME~\cite{tran2018rme}. We compute interaction scores as the inner product of latent factors:
 \begin{equation}
 \hat{y}_{ui} = \mathbf{p}_u^{\top}\mathbf{q}_i,
 \qquad \mathbf{p}_u, \mathbf{q}_i \in \mathbb{R}^{K},
@@ -431,68 +487,56 @@ where $K$ is the latent dimension. Stacking row-wise gives $\mathbf{P}\in\mathbb
 c_{ui} = 1 + \alpha\,\pi_{ui},
 \label{eq:pref_conf}
 \end{equation}
-where $\alpha \ge 0$ sets the extra confidence placed on positive interactions. One threshold $\theta=3$ defines positives across CPARMS construction, SPPMI construction, WMF training, and evaluation relevance.
+where $\alpha \ge 0$ sets the extra confidence placed on positive interactions. Disliked and neutral ratings therefore have $\pi_{ui}=0$ and unit confidence in the WMF term, as in Standard-WMF. The same liked view defines positives for WMF training, for the SPPMI term of CoFactor and the liked SPPMI terms of RME, and for evaluation relevance.
 
-The training objective combines a confidence-weighted WMF term over all user--item pairs, a $\gamma$-weighted CPARMS term over signal-supported pairs, and an $\ell_2$ penalty,
+The training objective combines a confidence-weighted WMF term over all user--item pairs, a $\gamma^{+}$-weighted liked CPARMS term, a $\gamma^{-}$-weighted disliked CPARMS term, and an $\ell_2$ penalty,
 \begin{equation}
 \begin{aligned}
 \mathcal{L} =\;
 & \sum_{u\in\mathcal{U}}\sum_{i\in\mathcal{I}}
 c_{ui}\,\big(\pi_{ui} - \hat{y}_{ui}\big)^2
 \;+\;
-\gamma \sum_{u\in\mathcal{U}}\sum_{i \in \Psi_u}
-\big(s_{ui} - \hat{y}_{ui}\big)^2 \\[2pt]
-& +\; \lambda\Big( \lVert \mathbf{P} \rVert_F^2 + \lVert \mathbf{Q} \rVert_F^2 \Big).
+\gamma^{+} \sum_{u\in\mathcal{U}}\sum_{i \in \Psi_u^{+}}
+\big(s^{+}_{ui} - \hat{y}_{ui}\big)^2 \\[2pt]
+& +\;
+\gamma^{-} \sum_{u\in\mathcal{U}}\sum_{i \in \Psi_u^{-}}
+\big(-s^{-}_{ui} - \hat{y}_{ui}\big)^2
+\;+\; \lambda\Big( \lVert \mathbf{P} \rVert_F^2 + \lVert \mathbf{Q} \rVert_F^2 \Big).
 \end{aligned}
 \label{eq:objective}
 \end{equation}
-The first term is the standard implicit WMF loss. It pulls predictions toward $1$ on observed positives with high confidence $1+\alpha$ and toward $0$ on all remaining pairs with unit confidence. The second term aligns predictions with the CPARMS signal on signal-supported candidate items. Every signal-supported item lies outside the seen set ($\Psi_u \cap \Omega_u = \varnothing$), so the signal never competes with an observed positive target. For each item $i \in \Psi_u$, the implicit term pulls the prediction toward $0$ with unit confidence, while the $\gamma$ term pulls it toward $s_{ui}$. Together, these terms encourage higher scores for CPARMS-supported candidates than for other unobserved items. The second term therefore provides additional information: each signal-supported entry receives a nonzero target outside the user's observed history, whereas the implicit term alone would treat it only as an unobserved zero. Users with short histories gain extra least-squares constraints wherever the rules support unseen candidates. The hyperparameter $\gamma$ sets the strength of the signal regularizer, and $\lambda$ is the $\ell_2$ coefficient. Table~\ref{tab:loss_activity} summarizes the activity of both loss terms.
+The first term is the standard implicit WMF loss. It pulls predictions toward $1$ on liked items with high confidence $1+\alpha$ and toward $0$ on all remaining pairs with unit confidence. The second term pulls predictions on liked-signal items toward $s^{+}_{ui}$, and the third term pulls predictions on disliked-signal items toward $-s^{-}_{ui}$. Every signal-supported item lies outside the seen set, so neither signal competes with an observed rating. For an unseen item supported only by liked rules, the WMF term pulls the prediction toward $0$ while the liked term pulls it up, so the item scores higher than other unobserved items. For an unseen item supported only by disliked rules, the disliked term pulls the prediction below $0$, so the item scores lower than other unobserved items. When both signals support the same item, both terms are active, and for fixed factors the three terms on that entry are minimized at $\hat{y}_{ui}=(\gamma^{+}s^{+}_{ui}-\gamma^{-}s^{-}_{ui})/(1+\gamma^{+}+\gamma^{-})$. The two CPARMS terms therefore provide additional information: each signal-supported entry receives a nonzero target outside the user's observed history, whereas the implicit term alone would treat it only as an unobserved zero. Users with short histories gain extra least-squares constraints wherever the rules support unseen candidates. The hyperparameters $\gamma^{+}$ and $\gamma^{-}$ set the strength of the two signal terms, and setting either weight to $0$ removes that term. The coefficient $\lambda$ is the $\ell_2$ penalty.
 
-\begin{table}[ht]
-\caption{Per-entry activity of the WMF and CPARMS objective terms. The
-CPARMS term is active only on signal-supported entries ($s_{ui}>0$)}
-\label{tab:loss_activity}
-\centering
-\small
-\begin{tabular}{@{}ccp{0.30\textwidth}p{0.44\textwidth}@{}}
-\toprule
-$s_{ui}$ & $\ell_{ui}$ & WMF term & CPARMS term \\
-\midrule
-$0$ & $0$ & Pulls $\hat{y}_{ui}$ toward $0$ &
-Inactive \\
-$0$ & $1$ & Pulls $\hat{y}_{ui}$ toward $1$ with weight $1+\alpha$ &
-Inactive \\
-$>0$ & $0$ & Pulls $\hat{y}_{ui}$ toward $0$ &
-Pulls $\hat{y}_{ui}$ toward $s_{ui}$ with weight $\gamma$ \\
-$>0$ & $1$ & Not applicable &
-Cannot occur because signal scores on seen items are masked \\
-\botrule
-\end{tabular}
-\end{table}
 \FloatBarrier
 
 \subsection{Optimization via Alternating Least Squares}
 
 Equation~\eqref{eq:objective} is a weighted least-squares objective. It is quadratic in $\mathbf{P}$ when $\mathbf{Q}$ is fixed and vice versa. For this reason, we optimize CPARMS-WMF with ALS, which allows a closed-form update for each factor row~\cite{hu2008implicit}. Let $\mathbf{C}^{u} = \operatorname{diag}(c_{u1}, \dots, c_{uI})$ be the $I\times I$ confidence diagonal, and let $\boldsymbol{\pi}_u=(\pi_{u1},\ldots,\pi_{uI})^\top$ be the preference vector for user $u$. Minimizing Eq.~\eqref{eq:objective} over $\mathbf{p}_u$ gives the normal equation:
 \begin{equation}
-\Big(
+\begin{aligned}
+&\Big(
 \mathbf{Q}^{\top}\mathbf{C}^{u}\mathbf{Q}
-+ \gamma \sum_{i \in \Psi_u}\mathbf{q}_i\mathbf{q}_i^{\top}
++ \gamma^{+} \!\sum_{i \in \Psi_u^{+}}\!\mathbf{q}_i\mathbf{q}_i^{\top}
++ \gamma^{-} \!\sum_{i \in \Psi_u^{-}}\!\mathbf{q}_i\mathbf{q}_i^{\top}
 + \lambda \mathbf{I}_{K}
-\Big)\mathbf{p}_u
-=
+\Big)\mathbf{p}_u \\
+&\qquad=
 \mathbf{Q}^{\top}\mathbf{C}^{u}\boldsymbol{\pi}_u
-+ \gamma \sum_{i \in \Psi_u} s_{ui}\,\mathbf{q}_i .
++ \gamma^{+} \!\sum_{i \in \Psi_u^{+}}\! s^{+}_{ui}\,\mathbf{q}_i
+- \gamma^{-} \!\sum_{i \in \Psi_u^{-}}\! s^{-}_{ui}\,\mathbf{q}_i .
+\end{aligned}
 \label{eq:normal_full}
 \end{equation}
-Following the standard implicit-feedback decomposition, we expand the confidence-weighted terms around the unit-confidence baseline. As a result, we only need to sum the contributions from positive and signal-supported items for each user:
+Following the standard implicit-feedback decomposition, we expand the confidence-weighted terms around the unit-confidence baseline. As a result, we only need to sum the contributions from liked and signal-supported items for each user:
 \begin{equation}
 \begin{aligned}
 \mathbf{A}_u =\;& \mathbf{Q}^{\top}\mathbf{Q} + \lambda \mathbf{I}_{K}
 + \alpha \!\!\sum_{i \in \Omega_u^{+}}\!\! \mathbf{q}_i\mathbf{q}_i^{\top}
-+ \gamma \!\sum_{i \in \Psi_u}\! \mathbf{q}_i\mathbf{q}_i^{\top}, \\[2pt]
++ \gamma^{+} \!\sum_{i \in \Psi_u^{+}}\! \mathbf{q}_i\mathbf{q}_i^{\top}
++ \gamma^{-} \!\sum_{i \in \Psi_u^{-}}\! \mathbf{q}_i\mathbf{q}_i^{\top}, \\[2pt]
 \mathbf{d}_u =\;& (1+\alpha)\!\!\sum_{i \in \Omega_u^{+}}\!\!\mathbf{q}_i
-+ \gamma \!\sum_{i \in \Psi_u}\! s_{ui}\,\mathbf{q}_i,
++ \gamma^{+} \!\sum_{i \in \Psi_u^{+}}\! s^{+}_{ui}\,\mathbf{q}_i
+- \gamma^{-} \!\sum_{i \in \Psi_u^{-}}\! s^{-}_{ui}\,\mathbf{q}_i,
 \end{aligned}
 \label{eq:als_accum}
 \end{equation}
@@ -501,7 +545,24 @@ where $\mathbf{A}_u\in\mathbb{R}^{K\times K}$ is the user-specific system matrix
 \mathbf{A}_u\mathbf{p}_u = \mathbf{d}_u .
 \label{eq:user_update}
 \end{equation}
-We precompute the shared term $\mathbf{Q}^{\top}\mathbf{Q}$ once per sweep, so each user update costs only the rank-one contributions of that user's positive and signal-supported items. Item-factor updates follow the same procedure with the roles of users and items swapped. We initialize both factor matrices with small-variance random values drawn from a fixed seed, and the algorithm then alternates user and item sweeps for a fixed number of iterations. At inference, we mask all seen items and rank the remaining items for user $u$ by $\hat{y}_{ui} = \mathbf{p}_u^{\top}\mathbf{q}_i$.
+We precompute the shared term $\mathbf{Q}^{\top}\mathbf{Q}$ once per sweep, so each user update costs only the rank-one contributions of that user's liked and signal-supported items. Item-factor updates follow the same procedure with the roles of users and items swapped. We initialize both factor matrices with small-variance random values drawn from a fixed seed, and the algorithm then alternates user and item sweeps for a fixed number of iterations. At inference, we mask all seen items and rank the remaining items for each user by $\hat{y}_{ui} = \mathbf{p}_u^{\top}\mathbf{q}_i$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% REVISION PROGRESS (2026-09-25)
+%% DONE (revised for the liked/disliked method and the new baselines):
+%%   Abstract, Keywords, Introduction, Related Work,
+%%   Proposed Method up to the end of Sec. 3.5 (ALS) -- this point.
+%%   Cold-start / new-user claims removed; subsection 3.6 deleted.
+%% NOT YET REVISED (everything below this comment is still the old text):
+%%   Experimental Setup, Results, tables, Discussion, Limitations,
+%%   Conclusion. Old items to replace: theta=3, MostPop, three baselines,
+%%   old numbers and old search-space table.
+%% OPEN ITEMS:
+%%   - Decision: users with no fit-window interactions (interaction_0)
+%%     are removed from the experiment; re-run tuning and final runs.
+%%   - Abstract results paragraph removed (TODO); rewrite after re-run.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%==================================%%

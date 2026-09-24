@@ -1,7 +1,16 @@
 """Generate liked/disliked CPARMS signals and fit their joint MF model."""
 
+import os
 import warnings
 from numbers import Integral
+
+import psutil
+
+# loky counts physical cores via `wmic`, which Windows 11 no longer ships. It
+# skips that lookup only when LOKY_MAX_CPU_COUNT is below the logical count.
+os.environ.setdefault(
+    "LOKY_MAX_CPU_COUNT", str(psutil.cpu_count(logical=False) or 1)
+)
 
 import numpy as np
 from scipy import sparse

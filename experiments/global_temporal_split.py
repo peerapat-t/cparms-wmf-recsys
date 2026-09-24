@@ -50,11 +50,10 @@ def _dataset_eda_stats(df: pd.DataFrame) -> dict:
         "n_liked": n_liked,
         "n_disliked": n_disliked,
         "n_users_eval": None,
-        "n_future_user_interactions_padded": None,
-        "n_future_user_positive_targets_padded": None,
+        "n_future_user_interactions_dropped": None,
+        "n_future_user_positive_targets_dropped": None,
         "n_future_item_interactions_dropped": None,
         "n_future_item_positive_targets_dropped": None,
-        "interaction_0": None,
         "interaction_1": None,
         "interaction_2": None,
         "interaction_3_plus": None,
@@ -106,7 +105,6 @@ def _interaction_group_counts(
 
 
     group_counts = {
-        "interaction_0": int((eligible & (history_counts == 0)).sum()),
         "interaction_1": int((eligible & (history_counts == 1)).sum()),
         "interaction_2": int((eligible & (history_counts == 2)).sum()),
         "interaction_3_plus": int((eligible & (history_counts >= 3)).sum()),
@@ -139,20 +137,20 @@ def _eval_protocol_stats(
     fit_events: pd.DataFrame,
     eval_events: pd.DataFrame,
 ) -> dict:
-    """Count future-user padding and future-item removal events."""
+    """Count future-user and future-item removal events."""
     known_user = eval_events["userid"].isin(
         pd.Index(fit_events["userid"].unique())
     )
     known_item = eval_events["itemid"].isin(
         pd.Index(fit_events["itemid"].unique())
     )
-    padded_user = eval_events.loc[~known_user & known_item]
+    dropped_user = eval_events.loc[~known_user & known_item]
     dropped_item = eval_events.loc[~known_item]
 
     return {
-        "n_future_user_interactions_padded": int(len(padded_user)),
-        "n_future_user_positive_targets_padded": int(
-            (padded_user["rating"] > LIKE_THRESHOLD).sum()
+        "n_future_user_interactions_dropped": int(len(dropped_user)),
+        "n_future_user_positive_targets_dropped": int(
+            (dropped_user["rating"] > LIKE_THRESHOLD).sum()
         ),
         "n_future_item_interactions_dropped": int(len(dropped_item)),
         "n_future_item_positive_targets_dropped": int(
@@ -224,14 +222,10 @@ def _index_and_build(
     fit_events: pd.DataFrame,
     eval_events: pd.DataFrame,
 ) -> tuple[SparseMatrix, SparseMatrix]:
-    """Index fit/evaluation events and drop unknown evaluation items."""
+    """Index fit/evaluation events and drop unknown evaluation users and items."""
 
 
-    user_values = pd.concat(
-        [fit_events["userid"], eval_events["userid"]],
-        ignore_index=True,
-    )
-    _, user_uniques = pd.factorize(user_values, sort=True)
+    _, user_uniques = pd.factorize(fit_events["userid"], sort=True)
     _, item_uniques = pd.factorize(fit_events["itemid"], sort=True)
     shape = (int(user_uniques.size), int(item_uniques.size))
 
@@ -243,8 +237,9 @@ def _index_and_build(
 
     eval_user_idx = pd.Index(user_uniques).get_indexer(eval_events["userid"])
     eval_item_idx = pd.Index(item_uniques).get_indexer(eval_events["itemid"])
+    known_user = eval_user_idx >= 0
     known_item = eval_item_idx >= 0
-    keep = known_item
+    keep = known_user & known_item
 
     eval_df = eval_events.loc[keep].copy()
     eval_df["u_idx"] = eval_user_idx[keep]

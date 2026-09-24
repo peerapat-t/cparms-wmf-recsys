@@ -3,7 +3,7 @@
 **Author:** Peerapat Tancharoen, KMITL
 
 This repository contains a reproducible study of top-N
-recommendation under sparse feedback and new-user cold start. Explicit Amazon
+recommendation for users with short histories under sparse feedback. Explicit Amazon
 ratings are converted into liked, disliked, and seen interaction matrices, then
 used to compare seven non-personalized, matrix-factorization, neural, graph, and
 CPARMS-regularized recommenders. `run_experiments.ipynb` runs temporal
@@ -126,8 +126,9 @@ The `_net_signal()` helper is used only to log the density of
 `CPARMS.fit()`.
 
 In CPARMS, shared item factors are learned from users with
-observed fit-window ratings. Evaluation-only users are folded in from their
-learned CPARMS signals while item factors remain fixed.
+observed fit-window ratings. Because the split keeps only fit-window users,
+every user in the stage matrices has at least one rating, so `fit_user_mask`
+selects all rows and the fold-in step in `CPARMS.fit()` is not used.
 
 ## Experiment Workflow
 
@@ -140,13 +141,14 @@ learned CPARMS signals while item factors remain fixed.
    `70/10/20` ratios. Cut points are snapped to the nearest unique-timestamp
    boundary, so no single timestamp straddles two partitions and the realized
    ratios can drift slightly from the targets.
-4. Index tuning matrices over train and validation users, padding validation-only
-   users as empty train rows. Keep only train-known items.
+4. Index tuning matrices over train users and train-known items only. Drop
+   validation events whose user or item does not appear in train.
 5. Run the reproducible random hyperparameter search once under `TUNING_SEED`.
 6. Select and freeze one dataset/model configuration by validation overall
    `NDCG@10`.
-7. Index final matrices over train, validation, and test users, padding test-only
-   users as empty train+validation rows. Keep only train+validation-known items.
+7. Index final matrices over train+validation users and train+validation-known
+   items only. Drop test events whose user or item does not appear in
+   train+validation.
 8. Retrain each frozen configuration on train + validation under every
    `SENSITIVITY_SEED`, changing only `random_state`.
 9. Evaluate on test at `K = 10, 20, 50, 100, 200`, running the per-user paired
@@ -154,14 +156,12 @@ learned CPARMS signals while item factors remain fixed.
 10. Aggregate sensitivity mean/standard deviation and export the five result
     sheets documented below.
 
-The experiment targets **new-user cold start** under sparse history. Every
-evaluation user is represented in the stage matrices, including users with no
-fit-window interaction. The item catalog remains fit-window-restricted:
-validation uses train-known items and test uses train+validation-known items.
-Interactions on future-only items are excluded because item cold start is outside
-this experiment. Empty padded user rows do not contribute to CPARMS rule fitting
-or shared item-factor training; their factors are folded in from the learned
-cluster-based CPARMS signal while item factors remain fixed.
+The experiment targets users with short histories under sparse feedback. Both
+the user set and the item catalog are fit-window-restricted: validation uses
+train-known users and items, and test uses train+validation-known users and
+items. Evaluation events of future-only users or future-only items are dropped
+because user and item cold start are outside this experiment. Every evaluated
+user therefore has at least one fit-window rating.
 
 The CSV inputs are expected to be deduplicated at the `userid,itemid` level.
 `_build_sparse_matrix()` still defensively collapses duplicate user-item events
@@ -179,7 +179,7 @@ inside a partition to their maximum rating.
 | Split ratios | `70/10/20` train/validation/test |
 | Ranking cutoffs | `10`, `20`, `50`, `100`, `200` |
 | Selection metric | Validation overall `NDCG@10` |
-| User activity groups | `interaction_0`, `interaction_1`, `interaction_2`, `interaction_3_plus` |
+| User activity groups | `interaction_1`, `interaction_2`, `interaction_3_plus` |
 | Dataset selection | Any subset of the five prepared CSVs; enable entries in `SELECTED_DATASETS` |
 | Enabled models | `01 ItemPop`, `02 Standard-WMF`, `03 CoFactor`, `04 RME`, `05 NeuMF`, `06 LightGCN`, `07 CPARMS` |
 | Output workbook | `results/final_results_<utc_timestamp>.xlsx` |
@@ -280,9 +280,9 @@ correction.
 
 ## Evaluation
 
-`experiments/all_ranker.py` computes NDCG for users with at least one relevant
-evaluation item (`rating > 4.0`) in the fit-known item catalog. This includes
-evaluation-only users with zero fit-window interactions. All items stored in the
+`experiments/all_ranker.py` computes NDCG for fit-window users with at least one
+relevant evaluation item (`rating > 4.0`) in the fit-known item catalog. All
+items stored in the
 training matrix are removed from each user's candidate list, including ratings
 `1`, `2`, `3`, and `4`. Score ties are resolved deterministically by item index.
 
@@ -291,13 +291,12 @@ regardless of rating polarity:
 
 | Group | Observed fit-window interactions |
 | --- | --- |
-| `interaction_0` | 0 |
 | `interaction_1` | 1 |
 | `interaction_2` | 2 |
 | `interaction_3_plus` | 3 or more |
 
-`interaction_0` contains evaluation-only users padded as empty fit rows and is
-the protocol's true zero-interaction new-user group.
+Users with no fit-window rating are not in the stage matrices, so there is no
+zero-interaction group.
 
 ## Output Workbook Structure
 
@@ -378,7 +377,6 @@ Metric columns are appended in cutoff order for each `K` in
 
 ```text
 ndcg_all@K
-ndcg_user_interaction_0@K
 ndcg_user_interaction_1@K
 ndcg_user_interaction_2@K
 ndcg_user_interaction_3_plus@K
@@ -431,7 +429,7 @@ sig_95
 sig_99
 ```
 
-`group` is `all` or one of the four activity groups. `n` is the number of
+`group` is `all` or one of the three activity groups. `n` is the number of
 users the paired test ran over (all users for `all`, or just that group's
 users). `mean_diff` is the primary model's mean NDCG@`k` minus the baseline's;
 positive means the primary model scored higher. `sig_90`/`sig_95`/`sig_99` are
@@ -452,11 +450,10 @@ n_interactions
 n_liked
 n_disliked
 n_users_eval
-n_future_user_interactions_padded
-n_future_user_positive_targets_padded
+n_future_user_interactions_dropped
+n_future_user_positive_targets_dropped
 n_future_item_interactions_dropped
 n_future_item_positive_targets_dropped
-interaction_0
 interaction_1
 interaction_2
 interaction_3_plus
@@ -466,11 +463,11 @@ sparsity_pct
 
 The `raw` row describes the full input dataset; its evaluation and group fields
 are blank. The `val` and `test` rows describe evaluation interactions retained
-after future-only items are removed. Activity groups count every observed
-fit-window rating; eligibility requires a positive evaluation target.
-`interaction_0` contains padded future users. The future-user columns count
-known-item events retained for those padded users, while the future-item columns
-count out-of-scope item-cold-start events that were dropped. Density is
+after future-only users and items are removed. Activity groups count every
+observed fit-window rating; eligibility requires a positive evaluation target.
+The future-user columns count known-item events of future-only users that were
+dropped, and the future-item columns count events on future-only items that
+were dropped. Density is
 `interactions / (users * items) * 100`, and sparsity is `100 - density`.
 `n_liked` counts ratings strictly above `LIKE_THRESHOLD` and `n_disliked`
 counts positive ratings strictly below `DISLIKE_THRESHOLD` (see
